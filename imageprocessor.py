@@ -7,6 +7,7 @@ from vtk.util import numpy_support
 from vtk.util.misc import vtkGetDataRoot
 import numpy as np
 from PIL import Image
+import nibabel as nib
 import warnings
 
 # warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -40,6 +41,10 @@ class ImageProcessor():
                     volume[i][j][imgslice] = y
             imgslice += 1
         return volume
+    def CreateNifti(self):
+        self.shape = self.CreateVolume().shape[2]
+        self.niftiData = nib.Nifti1Image(self.CreateVolume(), affine=np.eye(4))
+        return self.niftiData
 
 class VTKVisualiser():
     def __init__(self, data):
@@ -47,20 +52,33 @@ class VTKVisualiser():
         self.colors = vtk.vtkNamedColors()
         self.colors.SetColor('bgColor', [51, 77, 102, 255])
 
+    def NiftiImport(self):
+        self.niftiImporter = vtk.vtkNIFTIImageReader()
+        self.niftiImporter.setI
+
     def DataImport(self):
         self.dataImporter = vtk.vtkImageImport()
 
         w,d,h = self.data.shape
-        self.dataImporter.CopyImportVoidPointer(self.data, self.data.nbytes)
+        self.dataImporterString = self.data.tostring()
+        self.dataImporter.CopyImportVoidPointer(self.dataImporterString, len(self.dataImporterString))
+        # self.dataImporter.CopyImportVoidPointer(self.data, self.data.nbytes)
         self.dataImporter.SetDataScalarTypeToUnsignedChar()
         self.dataImporter.SetNumberOfScalarComponents(1)
-        self.dataImporter.SetDataSpacing(1,1,1)
+        self.dataImporter.SetDataSpacing(1.0, 1.0, 1.0)
         self.dataImporter.SetDataExtent(0, h-1, 0, d-1, 0, w-1)
         self.dataImporter.SetWholeExtent(0, h-1, 0, d-1, 0, w-1)
-        
-        self.dataImporter.Update()
 
         return self.dataImporter
+
+    def plotHeatMap(self):
+        self._extent = self.DataImport().GetDataExtent()
+        self.ConstPixelDims = [self._extent[1]-self._extent[0]+1,\
+            self._extent[3]-self._extent[2]+1, self._extent[5]-self._extent[4]+1]
+        self.ConstPixelSpacing = self.DataImport().GetPixelSpacing()
+
+        self.npArray = numpy_support.vtkImageToNumpy(self.DataImport().GetOutput(), self.ConstPixelDims)
+        plotHeatmap(np.rot90(self.npArray[:,256,:]))
 
     def Color(self):
         self.opacityTransferFunction = vtk.vtkPiecewiseFunction()
@@ -73,13 +91,14 @@ class VTKVisualiser():
         # self.opacityTransferFunction.AddPoint(0, 0)
         # self.colorTransferFunction.AddRGBPoint(0, 0, 0, 0)
 
-        self.colorTransferFunction.AddRGBPoint(500, 1.0, 0.5, 0.3)
-        self.colorTransferFunction.AddRGBPoint(1000, 1.0, 0.5, 0.3)
-        self.colorTransferFunction.AddRGBPoint(1150, 1.0, 1.0, 0.9)
+        self.colorTransferFunction.AddRGBPoint(500, 1.0, 0.0, 0.0)
+        self.colorTransferFunction.AddRGBPoint(1000, 0.0, 1.0, 0.0)
+        self.colorTransferFunction.AddRGBPoint(1150, 0.0, 0.0, 1.0)
 
-        self.opacityTransferFunction.AddPoint(10, 0.0)
-        self.opacityTransferFunction.AddPoint(100, 0.5)
-        self.opacityTransferFunction.AddPoint(500, 1.0)
+        self.opacityTransferFunction.AddPoint(0, 0.0)
+        self.opacityTransferFunction.AddPoint(50, 0.05)
+        self.opacityTransferFunction.AddPoint(120, 0.1)
+        self.opacityTransferFunction.AddPoint(150, 1.0)
 
         # self.colorTransferFunction.AddRGBPoint(0.0, 0.0, 0.0, 0.0)
         # self.colorTransferFunction.AddRGBPoint(64.0, 1.0, 0.0, 0.0)
@@ -96,7 +115,7 @@ class VTKVisualiser():
 
         self.volumeProperty.SetColor(self.Color()[1])
         self.volumeProperty.SetScalarOpacity(self.Color()[0])
-        self.volumeProperty.ShadeOn()
+        # self.volumeProperty.ShadeOn()
 
         self.volumeMapper.SetInputConnection(self.DataImport().GetOutputPort())
         # self.volumeMapper.SetMaximumImageSampleDistance(0.1)
@@ -127,7 +146,7 @@ class VTKVisualiser():
 
         self.partExtractor.SetInputConnection(self.DataImport().GetOutputPort())
         self.partExtractor.ComputeNormalsOn()
-        self.partExtractor.SetValue(0, 254)
+        self.partExtractor.SetValue(25, 100)
 
         self.partStripper.SetInputConnection(self.partExtractor.GetOutputPort())
 
@@ -242,9 +261,11 @@ if __name__ == "__main__":
     stack = ImageProcessor(directory)
     stack.ImageImport()
     stack.CreateVolume()
+    # stack.CreateNifti()
     vtkvis = VTKVisualiser(stack.CreateVolume())
-    vtkvis.InitialiseStack()
-    # vtkvis.InitialiseMC()
+    # vtkvis.InitialiseStack()
+    # vtkvis.plotHeatMap()
+    vtkvis.InitialiseMC()
     # vtkvis.InitialiseMC('dmc')
     # test = main(stack.CreateVolume())
     
