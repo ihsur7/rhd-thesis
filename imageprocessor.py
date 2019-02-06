@@ -8,11 +8,29 @@ from vtk.util.misc import vtkGetDataRoot
 import numpy as np
 from PIL import Image
 import nibabel as nib
+import plotly as py
+from plotly.graph_objs import *
 import warnings
 
+py.tools.set_credentials_file(username='abrafcukincadabra', api_key='B0bzzqaiK7bXw4c1zaVZ')
 # warnings.simplefilter(action='ignore', category=FutureWarning)
 
 print(vtk.vtkVersion.GetVTKSourceVersion())
+
+def plotHeatmap(array, name="plot"):
+    data = Data([
+        Heatmap(
+            z=array,
+            # scl='Greys'
+        )
+    ])
+    layout = Layout(
+        autosize=False,
+        title=name
+    )
+    fig = Figure(data=data, layout=layout)
+
+    return py.plotly.iplot(fig, filename=name)
 
 class ImageProcessor():
     def __init__(self, directory):
@@ -46,6 +64,11 @@ class ImageProcessor():
         self.niftiData = nib.Nifti1Image(self.CreateVolume(), affine=np.eye(4))
         return self.niftiData
 
+    def ShowImage(self, slice = 0):
+        array = self.CreateVolume().astype('uint8')
+        img = Image.fromarray(array[:, :, slice], 'L')
+        img.show()
+
 class VTKVisualiser():
     def __init__(self, data):
         self.data = data
@@ -60,9 +83,9 @@ class VTKVisualiser():
         self.dataImporter = vtk.vtkImageImport()
 
         w,d,h = self.data.shape
-        self.dataImporterString = self.data.tostring()
-        self.dataImporter.CopyImportVoidPointer(self.dataImporterString, len(self.dataImporterString))
-        # self.dataImporter.CopyImportVoidPointer(self.data, self.data.nbytes)
+        # self.dataImporterString = self.data.tostring()
+        # self.dataImporter.CopyImportVoidPointer(self.dataImporterString, len(self.dataImporterString))
+        self.dataImporter.CopyImportVoidPointer(self.data, self.data.nbytes)
         self.dataImporter.SetDataScalarTypeToUnsignedChar()
         self.dataImporter.SetNumberOfScalarComponents(1)
         self.dataImporter.SetDataSpacing(1.0, 1.0, 1.0)
@@ -71,14 +94,19 @@ class VTKVisualiser():
 
         return self.dataImporter
 
-    def plotHeatMap(self):
-        self._extent = self.DataImport().GetDataExtent()
-        self.ConstPixelDims = [self._extent[1]-self._extent[0]+1,\
-            self._extent[3]-self._extent[2]+1, self._extent[5]-self._extent[4]+1]
-        self.ConstPixelSpacing = self.DataImport().GetPixelSpacing()
+    def plotHeatMap(self, array, name='plot'):
+        self.hmdata = Data([
+            Heatmap(z=array,
+            scl = 'Greys'
+            )
+        ])
+        self.layout = Layout(
+            autosize=False,
+            title=name
+        )
+        self.fig = Figure(data=self.hmdata, layout = layout)
 
-        self.npArray = numpy_support.vtkImageToNumpy(self.DataImport().GetOutput(), self.ConstPixelDims)
-        plotHeatmap(np.rot90(self.npArray[:,256,:]))
+        return py.plotly.iplot(self.fig, filename=name)
 
     def Color(self):
         self.opacityTransferFunction = vtk.vtkPiecewiseFunction()
@@ -95,10 +123,12 @@ class VTKVisualiser():
         self.colorTransferFunction.AddRGBPoint(1000, 0.0, 1.0, 0.0)
         self.colorTransferFunction.AddRGBPoint(1150, 0.0, 0.0, 1.0)
 
-        self.opacityTransferFunction.AddPoint(0, 0.0)
-        self.opacityTransferFunction.AddPoint(50, 0.05)
-        self.opacityTransferFunction.AddPoint(120, 0.1)
-        self.opacityTransferFunction.AddPoint(150, 1.0)
+        self.opacityTransferFunction.AddPoint(0, 10.0)
+
+        # self.opacityTransferFunction.AddPoint(0, 0.0)
+        # self.opacityTransferFunction.AddPoint(50, 0.05)
+        # self.opacityTransferFunction.AddPoint(120, 0.1)
+        # self.opacityTransferFunction.AddPoint(150, 1.0)
 
         # self.colorTransferFunction.AddRGBPoint(0.0, 0.0, 0.0, 0.0)
         # self.colorTransferFunction.AddRGBPoint(64.0, 1.0, 0.0, 0.0)
@@ -130,13 +160,13 @@ class VTKVisualiser():
         
         self.threshold.SetInputConnection(self.DataImport().GetOutputPort())
 
-        self.threshold.ThresholdByLower(254)  # remove all soft tissue
+        self.threshold.ThresholdByLower(50)
         self.threshold.ReplaceInOn()
         self.threshold.SetInValue(0)  # set all values below 400 to 0
         self.threshold.ReplaceOutOn()
         self.threshold.SetOutValue(1)  # set all values above 400 to 1
-        self.threshold.Update()
-        
+        # self.threshold.Update()
+        print(self.threshold)
         return self.threshold
 
     def MarchingCubes(self):
@@ -144,9 +174,10 @@ class VTKVisualiser():
         self.partStripper = vtk.vtkStripper()
         self.partMapper = vtk.vtkPolyDataMapper()
 
-        self.partExtractor.SetInputConnection(self.DataImport().GetOutputPort())
+        # self.partExtractor.SetInputConnection(self.DataImport().GetOutputPort())
+        self.partExtractor.SetInputConnection(self.Threshold().GetOutputPort())
         self.partExtractor.ComputeNormalsOn()
-        self.partExtractor.SetValue(25, 100)
+        self.partExtractor.SetValue(0, 1)
 
         self.partStripper.SetInputConnection(self.partExtractor.GetOutputPort())
 
@@ -261,8 +292,11 @@ if __name__ == "__main__":
     stack = ImageProcessor(directory)
     stack.ImageImport()
     stack.CreateVolume()
+    plotHeatmap(stack.CreateVolume())
+    # stack.ShowImage()
     # stack.CreateNifti()
     vtkvis = VTKVisualiser(stack.CreateVolume())
+    vtkvis.plotHeatMap(stack.CreateVolume())
     # vtkvis.InitialiseStack()
     # vtkvis.plotHeatMap()
     vtkvis.InitialiseMC()
