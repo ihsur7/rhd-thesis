@@ -8,29 +8,30 @@ from vtk.util.misc import vtkGetDataRoot
 import numpy as np
 from PIL import Image
 import nibabel as nib
-import plotly as py
-from plotly.graph_objs import *
+import plotly.plotly as py
+import plotly.graph_objs as go
 import warnings
 
-py.tools.set_credentials_file(username='abrafcukincadabra', api_key='B0bzzqaiK7bXw4c1zaVZ')
+# py.tools.set_credentials_file(username='abrafcukincadabra', api_key='B0bzzqaiK7bXw4c1zaVZ')
 # warnings.simplefilter(action='ignore', category=FutureWarning)
 
 print(vtk.vtkVersion.GetVTKSourceVersion())
 
-def plotHeatmap(array, name="plot"):
-    data = Data([
-        Heatmap(
-            z=array,
-            # scl='Greys'
-        )
-    ])
-    layout = Layout(
-        autosize=False,
-        title=name
-    )
-    fig = Figure(data=data, layout=layout)
+# def plotHeatmap(array, name="plot"):
+#     trace = go.Heatmap(z=array)
+#     data = Data([
+#         Heatmap(
+#             z=array,
+#             # scl='Greys'
+#         )
+#     ])
+#     layout = Layout(
+#         autosize=False,
+#         title=name
+#     )
+#     fig = Figure(data=data, layout=layout)
 
-    return py.plotly.iplot(fig, filename=name)
+#     return py.plotly.iplot(fig, filename=name)
 
 class ImageProcessor():
     def __init__(self, directory):
@@ -77,7 +78,10 @@ class VTKVisualiser():
 
     def NiftiImport(self):
         self.niftiImporter = vtk.vtkNIFTIImageReader()
-        self.niftiImporter.setI
+        # self.niftiImporter.setI
+    
+    def CreateVTKData(self):
+        pass
 
     def DataImport(self):
         self.dataImporter = vtk.vtkImageImport()
@@ -91,22 +95,24 @@ class VTKVisualiser():
         self.dataImporter.SetDataSpacing(1.0, 1.0, 1.0)
         self.dataImporter.SetDataExtent(0, h-1, 0, d-1, 0, w-1)
         self.dataImporter.SetWholeExtent(0, h-1, 0, d-1, 0, w-1)
-
+        # print(self.dataImporter.GetOutput())
         return self.dataImporter
 
     def plotHeatMap(self, array, name='plot'):
-        self.hmdata = Data([
-            Heatmap(z=array,
-            scl = 'Greys'
-            )
-        ])
-        self.layout = Layout(
-            autosize=False,
-            title=name
-        )
-        self.fig = Figure(data=self.hmdata, layout = layout)
+        self.trace = go.Heatmap(z=array)
+        # self.hmdata = Data([
+        #     Heatmap(z=array,
+        #     scl = 'Greys'
+        #     )
+        # ])
+        # self.layout = Layout(
+        #     autosize=False,
+        #     title=name
+        # )
+        self.hmdata = [self.trace]
+        # self.fig = Figure(data=self.hmdata, layout = layout)
 
-        return py.plotly.iplot(self.fig, filename=name)
+        return py.iplot(self.hmdata, filename=name)
 
     def Color(self):
         self.opacityTransferFunction = vtk.vtkPiecewiseFunction()
@@ -166,8 +172,47 @@ class VTKVisualiser():
         self.threshold.ReplaceOutOn()
         self.threshold.SetOutValue(1)  # set all values above 400 to 1
         # self.threshold.Update()
-        print(self.threshold)
+        # print(self.threshold)
         return self.threshold
+
+    def vtkImageToNumpy(self, image, pixelDims):
+        self.pointData = image.GetPointData()
+        self.arrayData = self.pointData.GetArray(0)
+        self.arrayImage = numpy_support.vtk_to_numpy(self.arrayData)
+        self.arrayImage = self.arrayImage.reshape(pixelDims, order='F')
+        return self.arrayImage
+    
+    def ShowImportedImage(self, slice = 0):
+        self.arraydata = numpy_support.numpy_to_vtk(self.data.ravel(), deep=True, array_type=vtk.VTK_INT)
+        self.img_vtk = vtk.vtkImageData()
+        self.img_vtk.SetDimensions(self.data.shape)
+        self.img_vtk.SetSpacing(1, 1, 1)
+        self.img_vtk.GetPointData().SetScalars(self.arraydata)
+        self.vtk_img = numpy_support.vtk_to_numpy(self.img_vtk)
+        self.image = Image.fromarray(self.vtk_img)
+        self.image.show()
+        # self.arrayimage = self.vtkImageToNumpy(self.DataImport().GetOutput(), self.data.shape)
+        # self.image = Image.fromarray(self.arrayimage)
+        # print(self.arrayimage)
+        return
+
+    def ShowModifiedImage(self, slice = 0):
+        # print(self.Threshold().GetOutputPort())
+        print(self.data.shape)
+        # self.nparray = self.vtkImageToNumpy(self.Threshold().GetOutput(), self.data.shape)
+        self.vtkdata = self.Threshold().GetOutput()
+        print(self.vtkdata)
+        self.pointdata = self.vtkdata.GetPointData().GetScalars()
+        print(self.pointdata)
+        # self.arraydata = self.pointdata.GetArray(0)
+        self.nparray = numpy_support.vtk_to_numpy(self.pointdata)
+        print(self.nparray)
+
+        # self.nparray = numpy_support.vtk_to_numpy(self.Threshold().GetOutput())
+        self.img = Image.fromarray(self.nparray[:,:,slice], 'L')
+        # array = self.CreateVolume().astype('uint8')
+        # img = Image.fromarray(array[:, :, slice], 'L')
+        self.img.show()
 
     def MarchingCubes(self):
         self.partExtractor = vtk.vtkMarchingCubes()
@@ -292,14 +337,17 @@ if __name__ == "__main__":
     stack = ImageProcessor(directory)
     stack.ImageImport()
     stack.CreateVolume()
-    plotHeatmap(stack.CreateVolume())
+    # plotHeatmap(stack.CreateVolume())
     # stack.ShowImage()
     # stack.CreateNifti()
     vtkvis = VTKVisualiser(stack.CreateVolume())
-    vtkvis.plotHeatMap(stack.CreateVolume())
+    print(stack.CreateVolume().shape)
+    vtkvis.ShowImportedImage()
+    # vtkvis.ShowModifiedImage()
+    # vtkvis.plotHeatMap(np.rot90(stack.CreateVolume()[:,:,56]))#[stack.CreateVolume().shape[0], :, :])
     # vtkvis.InitialiseStack()
     # vtkvis.plotHeatMap()
-    vtkvis.InitialiseMC()
+    # vtkvis.InitialiseMC()
     # vtkvis.InitialiseMC('dmc')
     # test = main(stack.CreateVolume())
     
