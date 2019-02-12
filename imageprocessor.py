@@ -12,6 +12,8 @@ import plotly.plotly as py
 import plotly.graph_objs as go
 import warnings
 
+from pyevtk.hl import gridToVTK
+
 # py.tools.set_credentials_file(username='abrafcukincadabra', api_key='B0bzzqaiK7bXw4c1zaVZ')
 # warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -70,6 +72,29 @@ class ImageProcessor():
         img = Image.fromarray(array[:, :, slice], 'L')
         img.show()
 
+class ImageProcessor2():
+    def __init__(self, directory):
+        self.directory = directory
+        self.vtkdataroot = vtkGetDataRoot()
+        self.img_list = []
+
+    def BMPImageReader(self):
+        self.reader = vtk.vtkBMPReader()
+        self.reader.SetFilePrefix(self.vtkdataroot + os.path.join(*self.directory.split(',')))
+        self.reader.SetFilePattern('%s25_cropped%03d.bmp')
+        print(self.reader.GetDataExtent())
+        self.GetDimensions()
+        # self.reader.SetDirectoryName(os.path.join(*self.directory.split(',')))
+        # print(self.reader)
+        self.reader.Update()
+        # print(self.reader.GetOutput())
+
+    def GetDimensions(self):
+        for imgfile in glob.glob(os.path.join(*self.directory.split(','))):
+            img = Image.open(imgfile)
+            self.img_list.append(img)
+        print(len(self.img_list))
+
 class VTKVisualiser():
     def __init__(self, data):
         self.data = data
@@ -79,9 +104,42 @@ class VTKVisualiser():
     def NiftiImport(self):
         self.niftiImporter = vtk.vtkNIFTIImageReader()
         # self.niftiImporter.setI
-    
-    def CreateVTKData(self):
-        pass
+
+    def ConvertData(self):
+        self.vtk_array = numpy_support.numpy_to_vtk(num_array=self.data.ravel(), deep=1, array_type=vtk.VTK_INT)
+        print(self.vtk_array)
+
+        self.noSlices = self.data.shape[2]
+        self.data_stacked = np.dstack([self.data]*self.noSlices)
+
+        x = np.arange(0, self.data.shape[0]+1)
+        y = np.arange(0, self.data.shape[1]+1)
+        z = np.arange(0, self.noSlices+1)
+
+        gridToVTK('./data', x, y, z, cellData={'data': self.data_stacked})
+
+        # self.volume = vtk.vtkImplicitVolume()
+
+    def VTKDataImport(self):
+        self.img_vtk = vtk.vtkImageData()
+        self.img_vtk.SetDimensions(self.data.shape)
+        self.img_vtk.SetSpacing(1,1,1)
+        self.img_vtk.GetPointData().SetScalars(self.vtk_array)
+        print(self.img_vtk)
+
+        return self.img_vtk
+    def VTKVolume(self):
+        self.volume = vtk.vtkVolume()
+        self.volumeProperty = vtk.vtkVolumeProperty()
+        self.volumeMapper = vtk.vtkGPUVolumeRayCastMapper()
+
+        self.volumeProperty.SetColor(self.Color()[1])
+        self.volumeProperty.SetScalarOpacity(self.Color()[0])
+
+        self.volume.SetMapper(self.volumeMapper)
+        self.volume.SetProperty(self.volumeProperty)
+        print(self.VTKVolume)
+        return self.VTKVolume
 
     def DataImport(self):
         self.dataImporter = vtk.vtkImageImport()
@@ -98,49 +156,15 @@ class VTKVisualiser():
         # print(self.dataImporter.GetOutput())
         return self.dataImporter
 
-    def plotHeatMap(self, array, name='plot'):
-        self.trace = go.Heatmap(z=array)
-        # self.hmdata = Data([
-        #     Heatmap(z=array,
-        #     scl = 'Greys'
-        #     )
-        # ])
-        # self.layout = Layout(
-        #     autosize=False,
-        #     title=name
-        # )
-        self.hmdata = [self.trace]
-        # self.fig = Figure(data=self.hmdata, layout = layout)
-
-        return py.iplot(self.hmdata, filename=name)
-
     def Color(self):
         self.opacityTransferFunction = vtk.vtkPiecewiseFunction()
         self.colorTransferFunction = vtk.vtkColorTransferFunction()
-
-        # for i in range(0, 256):
-        #     # self.opacityTransferFunction.AddPoint(i, 0.2)
-        #     self.colorTransferFunction.AddRGBPoint(i, i/255.0, i/255.0, i/255.0)
-
-        # self.opacityTransferFunction.AddPoint(0, 0)
-        # self.colorTransferFunction.AddRGBPoint(0, 0, 0, 0)
 
         self.colorTransferFunction.AddRGBPoint(500, 1.0, 0.0, 0.0)
         self.colorTransferFunction.AddRGBPoint(1000, 0.0, 1.0, 0.0)
         self.colorTransferFunction.AddRGBPoint(1150, 0.0, 0.0, 1.0)
 
         self.opacityTransferFunction.AddPoint(0, 10.0)
-
-        # self.opacityTransferFunction.AddPoint(0, 0.0)
-        # self.opacityTransferFunction.AddPoint(50, 0.05)
-        # self.opacityTransferFunction.AddPoint(120, 0.1)
-        # self.opacityTransferFunction.AddPoint(150, 1.0)
-
-        # self.colorTransferFunction.AddRGBPoint(0.0, 0.0, 0.0, 0.0)
-        # self.colorTransferFunction.AddRGBPoint(64.0, 1.0, 0.0, 0.0)
-        # self.colorTransferFunction.AddRGBPoint(128.0, 0.0, 0.0, 1.0)
-        # self.colorTransferFunction.AddRGBPoint(192.0, 0.0, 1.0, 0.0)
-        # self.colorTransferFunction.AddRGBPoint(255.0, 0.0, 0.2, 0.0)
 
         return self.opacityTransferFunction, self.colorTransferFunction
 
@@ -157,8 +181,8 @@ class VTKVisualiser():
         # self.volumeMapper.SetMaximumImageSampleDistance(0.1)
 
         self.volume.SetMapper(self.volumeMapper)
-        self.volume.SetProperty(self.volumeProperty)
-
+        self.volume.SetProperty(self.volumeProperty)       
+        print(self.volume) 
         return self.volume
 
     def Threshold(self):
@@ -174,46 +198,7 @@ class VTKVisualiser():
         # self.threshold.Update()
         # print(self.threshold)
         return self.threshold
-
-    def vtkImageToNumpy(self, image, pixelDims):
-        self.pointData = image.GetPointData()
-        self.arrayData = self.pointData.GetArray(0)
-        self.arrayImage = numpy_support.vtk_to_numpy(self.arrayData)
-        self.arrayImage = self.arrayImage.reshape(pixelDims, order='F')
-        return self.arrayImage
     
-    def ShowImportedImage(self, slice = 0):
-        self.arraydata = numpy_support.numpy_to_vtk(self.data.ravel(), deep=True, array_type=vtk.VTK_INT)
-        self.img_vtk = vtk.vtkImageData()
-        self.img_vtk.SetDimensions(self.data.shape)
-        self.img_vtk.SetSpacing(1, 1, 1)
-        self.img_vtk.GetPointData().SetScalars(self.arraydata)
-        self.vtk_img = numpy_support.vtk_to_numpy(self.img_vtk)
-        self.image = Image.fromarray(self.vtk_img)
-        self.image.show()
-        # self.arrayimage = self.vtkImageToNumpy(self.DataImport().GetOutput(), self.data.shape)
-        # self.image = Image.fromarray(self.arrayimage)
-        # print(self.arrayimage)
-        return
-
-    def ShowModifiedImage(self, slice = 0):
-        # print(self.Threshold().GetOutputPort())
-        print(self.data.shape)
-        # self.nparray = self.vtkImageToNumpy(self.Threshold().GetOutput(), self.data.shape)
-        self.vtkdata = self.Threshold().GetOutput()
-        print(self.vtkdata)
-        self.pointdata = self.vtkdata.GetPointData().GetScalars()
-        print(self.pointdata)
-        # self.arraydata = self.pointdata.GetArray(0)
-        self.nparray = numpy_support.vtk_to_numpy(self.pointdata)
-        print(self.nparray)
-
-        # self.nparray = numpy_support.vtk_to_numpy(self.Threshold().GetOutput())
-        self.img = Image.fromarray(self.nparray[:,:,slice], 'L')
-        # array = self.CreateVolume().astype('uint8')
-        # img = Image.fromarray(array[:, :, slice], 'L')
-        self.img.show()
-
     def MarchingCubes(self):
         self.partExtractor = vtk.vtkMarchingCubes()
         self.partStripper = vtk.vtkStripper()
@@ -301,7 +286,7 @@ class VTKVisualiser():
         self.iren.Start()
 
 
-    def InitialiseStack(self):
+    def InitialiseStack(self, voltype='nc'):
         self.renderer = vtk.vtkRenderer()
         self.renderWin = vtk.vtkRenderWindow()
         self.renderInteractor = vtk.vtkRenderWindowInteractor()
@@ -309,7 +294,10 @@ class VTKVisualiser():
         self.renderWin.AddRenderer(self.renderer)
         self.renderInteractor.SetRenderWindow(self.renderWin)
 
-        self.renderer.AddVolume(self.Volume())
+        if voltype == 'convert':
+            self.renderer.AddVolume(self.VTKVolume())
+        else:
+            self.renderer.AddVolume(self.Volume())
 
         self.renderer.SetBackground(self.colors.GetColor3d("BkgColor"))
         self.renderWin.SetSize(550,550)
@@ -334,6 +322,7 @@ class VTKVisualiser():
 
 if __name__ == "__main__":
     directory = 'data,sample1,25,*.bmp'
+    directory2 = 'data,sample1,25'
     stack = ImageProcessor(directory)
     stack.ImageImport()
     stack.CreateVolume()
@@ -341,8 +330,10 @@ if __name__ == "__main__":
     # stack.ShowImage()
     # stack.CreateNifti()
     vtkvis = VTKVisualiser(stack.CreateVolume())
-    print(stack.CreateVolume().shape)
-    vtkvis.ShowImportedImage()
+    vtkvis.InitialiseStack(voltype='convert')
+    # print(stack.CreateVolume().shape)
+    # vtkvis.ShowThresholdImage()
+    # vtkvis.ShowImportedImage()
     # vtkvis.ShowModifiedImage()
     # vtkvis.plotHeatMap(np.rot90(stack.CreateVolume()[:,:,56]))#[stack.CreateVolume().shape[0], :, :])
     # vtkvis.InitialiseStack()
@@ -350,4 +341,8 @@ if __name__ == "__main__":
     # vtkvis.InitialiseMC()
     # vtkvis.InitialiseMC('dmc')
     # test = main(stack.CreateVolume())
+
+    # vtkvis.ConvertData()
+    # newstack = ImageProcessor2(directory2)
+    # newstack.BMPImageReader()
     
