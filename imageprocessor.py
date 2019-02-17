@@ -77,23 +77,100 @@ class ImageProcessor2():
         self.directory = directory
         self.vtkdataroot = vtkGetDataRoot()
         self.img_list = []
+        self.colors = vtk.vtkNamedColors()
+
 
     def BMPImageReader(self):
         self.reader = vtk.vtkBMPReader()
-        self.reader.SetFilePrefix(self.vtkdataroot + os.path.join(*self.directory.split(',')))
+        self.reader.SetFilePrefix(os.path.join(*self.directory.split(',')))
         self.reader.SetFilePattern('%s25_cropped%03d.bmp')
-        print(self.reader.GetDataExtent())
-        self.GetDimensions()
+        # print(self.reader.GetDataExtent())
+        self.dims = self.GetDimensions()
+        self.reader.SetDataExtent(0, self.dims[2]-1, 0, self.dims[1]-1, 0, self.dims[0]-1)
+        # self.reader.SetSpacing(0, 0, 0)
+
+        self.reader.SetDataScalarTypeToUnsignedChar()
+        self.reader.SetNumberOfScalarComponents(1)
         # self.reader.SetDirectoryName(os.path.join(*self.directory.split(',')))
         # print(self.reader)
-        self.reader.Update()
+        # self.reader.Update()
         # print(self.reader.GetOutput())
+        return self.reader
 
     def GetDimensions(self):
-        for imgfile in glob.glob(os.path.join(*self.directory.split(','))):
+        self.imageformat = ',*.bmp'
+        self.fulldir = self.directory + self.imageformat
+        for imgfile in glob.glob(os.path.join(*self.fulldir.split(','))):
             img = Image.open(imgfile)
             self.img_list.append(img)
-        print(len(self.img_list))
+        temp = self.img_list[0]
+        arr = np.array(temp) #Another way of converting list to array
+        w,d = temp.size
+        h = len(self.img_list)
+        return (w, d, h)
+    
+    def Color(self):
+        self.opacityTransferFunction = vtk.vtkPiecewiseFunction()
+        self.colorTransferFunction = vtk.vtkColorTransferFunction()
+
+        self.colorTransferFunction.AddRGBPoint(0.0, 0.0, 0.0, 0.0)
+        self.colorTransferFunction.AddRGBPoint(64.0, 1.0, 0.0, 0.0)
+        self.colorTransferFunction.AddRGBPoint(128.0, 0.0, 0.0, 1.0)
+        self.colorTransferFunction.AddRGBPoint(192.0, 0.0, 1.0, 0.0)
+        self.colorTransferFunction.AddRGBPoint(255.0, 0.0, 0.2, 0.0)
+
+        self.opacityTransferFunction.AddPoint(0, 10.0)
+        self.opacityTransferFunction.AddPoint(100, 100.0)
+
+        return self.opacityTransferFunction, self.colorTransferFunction
+
+    def Volume(self):
+        self.volume = vtk.vtkVolume()
+        self.volumeProperty = vtk.vtkVolumeProperty()
+        self.volumeMapper = vtk.vtkGPUVolumeRayCastMapper()
+
+        self.volumeProperty.SetColor(self.Color()[1])
+        self.volumeProperty.SetScalarOpacity(self.Color()[0])
+        # self.volumeProperty.ShadeOn()
+
+        self.volumeMapper.SetInputConnection(self.BMPImageReader().GetOutputPort())
+        # self.volumeMapper.SetMaximumImageSampleDistance(0.1)
+
+        self.volume.SetMapper(self.volumeMapper)
+        self.volume.SetProperty(self.volumeProperty)       
+        print(self.volume) 
+        return self.volume
+
+    def Threshold(self):
+        self.threshold = vtk.vtkImageThreshold()
+        
+        self.threshold.SetInputConnection(self.DataImport().GetOutputPort())
+
+        self.threshold.ThresholdByLower(50)
+        self.threshold.ReplaceInOn()
+        self.threshold.SetInValue(0)  # set all values below 400 to 0
+        self.threshold.ReplaceOutOn()
+        self.threshold.SetOutValue(1)  # set all values above 400 to 1
+        # self.threshold.Update()
+        # print(self.threshold)
+        return self.threshold
+
+    def InitialiseStack(self, voltype='nc'):
+        self.renderer = vtk.vtkRenderer()
+        self.renderWin = vtk.vtkRenderWindow()
+        self.renderInteractor = vtk.vtkRenderWindowInteractor()
+
+        self.renderWin.AddRenderer(self.renderer)
+        self.renderInteractor.SetRenderWindow(self.renderWin)
+    
+        self.renderer.AddVolume(self.Volume())
+
+        self.renderer.SetBackground(self.colors.GetColor3d("BkgColor"))
+        self.renderWin.SetSize(550,550)
+        self.renderWin.SetMultiSamples(4)
+
+        self.renderWin.Render()
+        self.renderInteractor.Start()
 
 class VTKVisualiser():
     def __init__(self, data):
@@ -320,9 +397,61 @@ class VTKVisualiser():
     # dmc.GenerateValues(1,1,1)
     # dmc.Update()
 
+class ModelProcessor():
+    def __init__(self, directory):
+        self.directory = directory
+    
+    # def get_program_parameters(self):
+    #     import argparse
+    #     self.description = 'Read a .stl file.'
+    #     self.epilogue = ''''''
+    #     self.parser = argparse.ArgumentParser(description=self.description, epilog=self.epilogue,
+    #                                           formatter_class=argparse.RawDescriptionHelpFormatter)
+    #     self.parser.add_argument('filename', help=self.filename)
+    #     self.args = self.parser.parse_args()
+    #     return self.args.filename
+
+    def Colors(self):
+        self.colors = vtk.vtkNamedColors()
+        return self.colors
+
+    def STLReader(self):
+        self.reader = vtk.vtkSTLReader()
+        self.reader.SetFileName(os.path.join(*self.directory.split(',')))
+        return self.reader
+
+    def Mapper(self):
+        self.mapper = vtk.vtkPolyDataMapper()
+        self.mapper.SetInputConnection(self.STLReader().GetOutputPort())
+        return self.mapper
+
+    def Actor(self):
+        self.actor = vtk.vtkActor()
+        self.actor.SetMapper(self.Mapper())
+        return self.actor
+
+    def Renderer(self):
+        self.ren = vtk.vtkRenderer()
+        self.renWin = vtk.vtkRenderWindow()
+        self.renWin.AddRenderer(self.ren)
+        self.ren.SetBackground(self.Colors().GetColor3d("black"))
+
+        # Create a renderwindowinteractor
+        self.iren = vtk.vtkRenderWindowInteractor()
+        self.iren.SetRenderWindow(self.renWin)
+
+        # Assign actor to the renderer
+        self.ren.AddActor(self.Actor())
+
+        # Enable user interface interactor
+        self.iren.Initialize()
+        self.renWin.Render()
+        self.iren.Start()
+
 if __name__ == "__main__":
     directory = 'data,sample1,25,*.bmp'
     directory2 = 'data,sample1,25'
+    directory3 = 'data,sample1,25.stl'
     stack = ImageProcessor(directory)
     stack.ImageImport()
     stack.CreateVolume()
@@ -330,7 +459,7 @@ if __name__ == "__main__":
     # stack.ShowImage()
     # stack.CreateNifti()
     vtkvis = VTKVisualiser(stack.CreateVolume())
-    vtkvis.InitialiseStack(voltype='convert')
+    # vtkvis.InitialiseStack(voltype='convert')
     # print(stack.CreateVolume().shape)
     # vtkvis.ShowThresholdImage()
     # vtkvis.ShowImportedImage()
@@ -343,6 +472,9 @@ if __name__ == "__main__":
     # test = main(stack.CreateVolume())
 
     # vtkvis.ConvertData()
-    # newstack = ImageProcessor2(directory2)
+    newstack = ImageProcessor2(directory2)
     # newstack.BMPImageReader()
+    newstack.InitialiseStack()
     
+    # stlmodel = ModelProcessor(directory3)
+    # stlmodel.Renderer()
