@@ -339,8 +339,9 @@ if __name__ == "__main__":
     # stlmodel = ModelProcessor(directory3)
     # stlmodel.Renderer()
 
-#Legacy Code
+'''Legacy Code
 class VTKVisualiser():
+
     def __init__(self, data):
         self.data = data
         self.colors = vtk.vtkNamedColors()
@@ -400,3 +401,4 @@ class VTKVisualiser():
         self.dataImporter.SetWholeExtent(0, h-1, 0, d-1, 0, w-1)
         # print(self.dataImporter.GetOutput())
         return self.dataImporter
+'''
