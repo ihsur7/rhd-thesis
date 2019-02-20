@@ -19,22 +19,6 @@ from pyevtk.hl import gridToVTK
 
 print(vtk.vtkVersion.GetVTKSourceVersion())
 
-# def plotHeatmap(array, name="plot"):
-#     trace = go.Heatmap(z=array)
-#     data = Data([
-#         Heatmap(
-#             z=array,
-#             # scl='Greys'
-#         )
-#     ])
-#     layout = Layout(
-#         autosize=False,
-#         title=name
-#     )
-#     fig = Figure(data=data, layout=layout)
-
-#     return py.plotly.iplot(fig, filename=name)
-
 class ImageProcessor():
     def __init__(self, directory):
         self.directory = directory
@@ -77,24 +61,20 @@ class ImageProcessor2():
         self.directory = directory
         self.vtkdataroot = vtkGetDataRoot()
         self.img_list = []
-        self.colors = vtk.vtkNamedColors()
-
 
     def BMPImageReader(self):
         self.reader = vtk.vtkBMPReader()
         self.reader.SetFilePrefix(os.path.join(*self.directory.split(',')))
         self.reader.SetFilePattern('%s25_cropped%03d.bmp')
-        # print(self.reader.GetDataExtent())
+        self.reader.SetFileNameSliceOffset(0)
         self.dims = self.GetDimensions()
+        self.reader.SetDataSpacing(1, 1, 1.6)
         self.reader.SetDataExtent(0, self.dims[2]-1, 0, self.dims[1]-1, 0, self.dims[0]-1)
-        # self.reader.SetSpacing(0, 0, 0)
 
         self.reader.SetDataScalarTypeToUnsignedChar()
         self.reader.SetNumberOfScalarComponents(1)
-        # self.reader.SetDirectoryName(os.path.join(*self.directory.split(',')))
-        # print(self.reader)
-        # self.reader.Update()
-        # print(self.reader.GetOutput())
+        self.reader.Allow8BitBMPOn()
+        self.reader.Update()
         return self.reader
 
     def GetDimensions(self):
@@ -108,22 +88,27 @@ class ImageProcessor2():
         w,d = temp.size
         h = len(self.img_list)
         return (w, d, h)
-    
+
+class VTKVolume():
+    def __init__(self, inputdata, outline=True):
+        self.inputdata = inputdata
+        self.outline = outline
+        self.colors = vtk.vtkNamedColors()
+
     def Color(self):
         self.opacityTransferFunction = vtk.vtkPiecewiseFunction()
         self.colorTransferFunction = vtk.vtkColorTransferFunction()
 
-        self.colorTransferFunction.AddRGBPoint(0.0, 0.0, 0.0, 0.0)
-        self.colorTransferFunction.AddRGBPoint(64.0, 1.0, 0.0, 0.0)
-        self.colorTransferFunction.AddRGBPoint(128.0, 0.0, 0.0, 1.0)
-        self.colorTransferFunction.AddRGBPoint(192.0, 0.0, 1.0, 0.0)
-        self.colorTransferFunction.AddRGBPoint(255.0, 0.0, 0.2, 0.0)
+        self.colorTransferFunction.AddRGBPoint(500, 1.0, 0.5, 0.3)
+        self.colorTransferFunction.AddRGBPoint(1000, 1.0, 0.5, 0.3)
+        self.colorTransferFunction.AddRGBPoint(1150, 1.0, 1.0, 0.9)
 
-        self.opacityTransferFunction.AddPoint(0, 10.0)
-        self.opacityTransferFunction.AddPoint(100, 100.0)
+        self.opacityTransferFunction.AddPoint(0, 0.00)
+        self.opacityTransferFunction.AddPoint(100, 0.00)
+        self.opacityTransferFunction.AddPoint(255, 1)
 
         return self.opacityTransferFunction, self.colorTransferFunction
-
+    
     def Volume(self):
         self.volume = vtk.vtkVolume()
         self.volumeProperty = vtk.vtkVolumeProperty()
@@ -131,31 +116,20 @@ class ImageProcessor2():
 
         self.volumeProperty.SetColor(self.Color()[1])
         self.volumeProperty.SetScalarOpacity(self.Color()[0])
-        # self.volumeProperty.ShadeOn()
+        self.volumeProperty.SetInterpolationTypeToLinear()
+        self.volumeProperty.ShadeOn()
+        self.volumeProperty.SetAmbient(0.4)
+        self.volumeProperty.SetDiffuse(0.6)
+        self.volumeProperty.SetSpecular(0.2)
 
-        self.volumeMapper.SetInputConnection(self.BMPImageReader().GetOutputPort())
+        self.volumeMapper.SetInputConnection(self.inputdata.GetOutputPort())
         # self.volumeMapper.SetMaximumImageSampleDistance(0.1)
 
         self.volume.SetMapper(self.volumeMapper)
         self.volume.SetProperty(self.volumeProperty)       
-        print(self.volume) 
         return self.volume
 
-    def Threshold(self):
-        self.threshold = vtk.vtkImageThreshold()
-        
-        self.threshold.SetInputConnection(self.DataImport().GetOutputPort())
-
-        self.threshold.ThresholdByLower(50)
-        self.threshold.ReplaceInOn()
-        self.threshold.SetInValue(0)  # set all values below 400 to 0
-        self.threshold.ReplaceOutOn()
-        self.threshold.SetOutValue(1)  # set all values above 400 to 1
-        # self.threshold.Update()
-        # print(self.threshold)
-        return self.threshold
-
-    def InitialiseStack(self, voltype='nc'):
+    def Render(self):
         self.renderer = vtk.vtkRenderer()
         self.renderWin = vtk.vtkRenderWindow()
         self.renderInteractor = vtk.vtkRenderWindowInteractor()
@@ -169,9 +143,203 @@ class ImageProcessor2():
         self.renderWin.SetSize(550,550)
         self.renderWin.SetMultiSamples(4)
 
-        self.renderWin.Render()
-        self.renderInteractor.Start()
+        if self.outline == True:
+            self.outlineclass = VTKOutline(self.inputdata).Outline()
+            self.renderer.AddActor(self.outlineclass)
 
+            self.renderWin.Render()
+            self.renderInteractor.Start()
+
+        else:
+            self.renderWin.Render()
+            self.renderInteractor.Start()
+
+class VTKMarchingCubes():
+    def __init__(self, inputdata, mctype, outline=True, threshold=0):
+        self.inputdata = inputdata
+        self.outline = outline
+        self.mctype = mctype
+        self.threshold = threshold
+        self.colors = vtk.vtkNamedColors()
+
+    def Threshold(self):
+        self.threshold = vtk.vtkImageThreshold()
+        
+        self.threshold.SetInputConnection(self.inputdata.GetOutputPort())
+
+        self.threshold.ThresholdByLower(self.threshold)
+        self.threshold.ReplaceInOn()
+        self.threshold.SetInValue(0)  # set all values below 400 to 0
+        self.threshold.ReplaceOutOn()
+        self.threshold.SetOutValue(1)  # set all values above 400 to 1
+        # self.threshold.Update()
+        # print(self.threshold)
+        return self.threshold
+
+    def MarchingCubes(self):
+        self.partExtractor = vtk.vtkMarchingCubes()
+        self.partStripper = vtk.vtkStripper()
+        self.partMapper = vtk.vtkPolyDataMapper()
+
+        # self.partExtractor.SetInputConnection(self.DataImport().GetOutputPort())
+        self.partExtractor.SetInputConnection(self.inputdata.GetOutputPort())
+        # self.partExtractor.ComputeNormalsOn()
+        self.partExtractor.SetValue(0, 0.01)
+
+        self.partStripper.SetInputConnection(self.partExtractor.GetOutputPort())
+
+        self.partMapper.SetInputConnection(self.partStripper.GetOutputPort())
+        self.partMapper.ScalarVisibilityOff()
+
+        self.part = vtk.vtkActor()
+        self.part.SetMapper(self.partMapper)
+        self.part.GetProperty().SetDiffuseColor(self.colors.GetColor3d('Ivory'))
+
+        return self.part
+    
+    def DiscreteMarchingCubes(self):
+        self.partExtractor = vtk.vtkDiscreteMarchingCubes()
+        self.partMapper = vtk.vtkPolyDataMapper()
+
+        self.partExtractor.SetInputConnection(self.Threshold().GetOutputPort())
+        self.partExtractor.GenerateValues(1,1,1)
+        self.partExtractor.Update()
+
+        self.partMapper.SetInputConnection(self.partExtractor.GetOutputPort())
+
+        self.part = vtk.vtkActor()
+        self.part.SetMapper(self.partMapper)
+        self.part.GetProperty().SetDiffuseColor(self.colors.GetColor3d('Ivory'))
+
+        self.partExtractor.Update()
+
+        return self.part
+    
+    def Render(self):
+        self.aRenderer = vtk.vtkRenderer()
+        self.arenWin = vtk.vtkRenderWindow()
+        self.aCamera = vtk.vtkCamera()
+        self.iren = vtk.vtkRenderWindowInteractor()
+        
+        self.arenWin.AddRenderer(self.aRenderer)
+        
+        self.iren.SetRenderWindow(self.arenWin)
+
+        self.aCamera.SetViewUp(0, 0, -1)
+        self.aCamera.SetPosition(0, -1, 0)
+        self.aCamera.SetFocalPoint(0, 0, 0)
+        self.aCamera.ComputeViewPlaneNormal()
+        self.aCamera.Azimuth(30.0)
+        self.aCamera.Elevation(30.0)
+        self.aRenderer.SetActiveCamera(self.aCamera)
+        self.aRenderer.ResetCamera()
+        self.aCamera.Dolly(1.5)
+
+        self.aRenderer.SetBackground(self.colors.GetColor3d("BkgColor"))
+        self.arenWin.SetSize(640, 480)
+
+        self.aRenderer.ResetCameraClippingRange()
+
+        if self.mctype == 'dmc':
+            self.aRenderer.AddActor(self.DiscreteMarchingCubes())
+        else:
+            self.aRenderer.AddActor(self.MarchingCubes())
+        if self.outline == True:
+            self.outlineclass = VTKOutline(self.inputdata).Outline()
+            self.aRenderer.AddActor(self.outlineclass)
+            self.iren.Initialize()
+            self.iren.Start()
+        else:
+            self.iren.Initialize()
+            self.iren.Start()
+        
+        
+        return
+
+class VTKOutline():
+    def __init__(self, inputdata):
+        self.inputdata = inputdata
+        self.colors = vtk.vtkNamedColors()
+
+    def Outline(self):
+        self.outlineData = vtk.vtkOutlineFilter()
+        self.outlineData.SetInputConnection(self.inputdata.GetOutputPort())
+
+        self.mapOutline = vtk.vtkPolyDataMapper()
+        self.mapOutline.SetInputConnection(self.outlineData.GetOutputPort())
+        
+        self.outline = vtk.vtkActor()
+        self.outline.SetMapper(self.mapOutline)
+        self.outline.GetProperty().SetColor(self.colors.GetColor3d('Red'))
+
+        return self.outline
+
+class ModelProcessor():
+    def __init__(self, directory):
+        self.directory = directory
+    
+    # def get_program_parameters(self):
+    #     import argparse
+    #     self.description = 'Read a .stl file.'
+    #     self.epilogue = ''''''
+    #     self.parser = argparse.ArgumentParser(description=self.description, epilog=self.epilogue,
+    #                                           formatter_class=argparse.RawDescriptionHelpFormatter)
+    #     self.parser.add_argument('filename', help=self.filename)
+    #     self.args = self.parser.parse_args()
+    #     return self.args.filename
+
+    def Colors(self):
+        self.colors = vtk.vtkNamedColors()
+        return self.colors
+
+    def STLReader(self):
+        self.reader = vtk.vtkSTLReader()
+        self.reader.SetFileName(os.path.join(*self.directory.split(',')))
+        return self.reader
+
+    def Mapper(self):
+        self.mapper = vtk.vtkPolyDataMapper()
+        self.mapper.SetInputConnection(self.STLReader().GetOutputPort())
+        return self.mapper
+
+    def Actor(self):
+        self.actor = vtk.vtkActor()
+        self.actor.SetMapper(self.Mapper())
+        return self.actor
+
+    def Renderer(self):
+        self.ren = vtk.vtkRenderer()
+        self.renWin = vtk.vtkRenderWindow()
+        self.renWin.AddRenderer(self.ren)
+        self.ren.SetBackground(self.Colors().GetColor3d("black"))
+
+        # Create a renderwindowinteractor
+        self.iren = vtk.vtkRenderWindowInteractor()
+        self.iren.SetRenderWindow(self.renWin)
+
+        # Assign actor to the renderer
+        self.ren.AddActor(self.Actor())
+
+        # Enable user interface interactor
+        self.iren.Initialize()
+        self.renWin.Render()
+        self.iren.Start()
+
+if __name__ == "__main__":
+    directory = 'data,sample1,25,*.bmp'
+    directory2 = 'data,sample1,25,'
+    directory3 = 'data,sample1,25.stl'
+
+    newstack = ImageProcessor2(directory2).BMPImageReader()
+    startVTK = VTKVolume(newstack, outline=True)
+    startVTK.Render()
+    startmc = VTKMarchingCubes(newstack, mctype='mc', outline=True, threshold=100)
+    startmc.Render()
+    
+    # stlmodel = ModelProcessor(directory3)
+    # stlmodel.Renderer()
+
+#Legacy Code
 class VTKVisualiser():
     def __init__(self, data):
         self.data = data
@@ -232,249 +400,3 @@ class VTKVisualiser():
         self.dataImporter.SetWholeExtent(0, h-1, 0, d-1, 0, w-1)
         # print(self.dataImporter.GetOutput())
         return self.dataImporter
-
-    def Color(self):
-        self.opacityTransferFunction = vtk.vtkPiecewiseFunction()
-        self.colorTransferFunction = vtk.vtkColorTransferFunction()
-
-        self.colorTransferFunction.AddRGBPoint(500, 1.0, 0.0, 0.0)
-        self.colorTransferFunction.AddRGBPoint(1000, 0.0, 1.0, 0.0)
-        self.colorTransferFunction.AddRGBPoint(1150, 0.0, 0.0, 1.0)
-
-        self.opacityTransferFunction.AddPoint(0, 10.0)
-
-        return self.opacityTransferFunction, self.colorTransferFunction
-
-    def Volume(self):
-        self.volume = vtk.vtkVolume()
-        self.volumeProperty = vtk.vtkVolumeProperty()
-        self.volumeMapper = vtk.vtkGPUVolumeRayCastMapper()
-
-        self.volumeProperty.SetColor(self.Color()[1])
-        self.volumeProperty.SetScalarOpacity(self.Color()[0])
-        # self.volumeProperty.ShadeOn()
-
-        self.volumeMapper.SetInputConnection(self.DataImport().GetOutputPort())
-        # self.volumeMapper.SetMaximumImageSampleDistance(0.1)
-
-        self.volume.SetMapper(self.volumeMapper)
-        self.volume.SetProperty(self.volumeProperty)       
-        print(self.volume) 
-        return self.volume
-
-    def Threshold(self):
-        self.threshold = vtk.vtkImageThreshold()
-        
-        self.threshold.SetInputConnection(self.DataImport().GetOutputPort())
-
-        self.threshold.ThresholdByLower(50)
-        self.threshold.ReplaceInOn()
-        self.threshold.SetInValue(0)  # set all values below 400 to 0
-        self.threshold.ReplaceOutOn()
-        self.threshold.SetOutValue(1)  # set all values above 400 to 1
-        # self.threshold.Update()
-        # print(self.threshold)
-        return self.threshold
-    
-    def MarchingCubes(self):
-        self.partExtractor = vtk.vtkMarchingCubes()
-        self.partStripper = vtk.vtkStripper()
-        self.partMapper = vtk.vtkPolyDataMapper()
-
-        # self.partExtractor.SetInputConnection(self.DataImport().GetOutputPort())
-        self.partExtractor.SetInputConnection(self.Threshold().GetOutputPort())
-        self.partExtractor.ComputeNormalsOn()
-        self.partExtractor.SetValue(0, 1)
-
-        self.partStripper.SetInputConnection(self.partExtractor.GetOutputPort())
-
-        self.partMapper.SetInputConnection(self.partStripper.GetOutputPort())
-        self.partMapper.ScalarVisibilityOff()
-
-        self.part = vtk.vtkActor()
-        self.part.SetMapper(self.partMapper)
-        self.part.GetProperty().SetDiffuseColor(self.colors.GetColor3d('Ivory'))
-
-        return self.part
-
-    def DiscreteMarchingCubes(self):
-        self.partExtractor = vtk.vtkDiscreteMarchingCubes()
-        self.partMapper = vtk.vtkPolyDataMapper()
-
-        self.partExtractor.SetInputConnection(self.Threshold().GetOutputPort())
-        self.partExtractor.GenerateValues(1,1,1)
-        self.partExtractor.Update()
-
-        self.partMapper.SetInputConnection(self.partExtractor.GetOutputPort())
-
-        self.part = vtk.vtkActor()
-        self.part.SetMapper(self.partMapper)
-        self.part.GetProperty().SetDiffuseColor(self.colors.GetColor3d('Ivory'))
-
-        self.partExtractor.Update()
-
-        return self.part
-
-    def Outline(self):
-        self.outlineData = vtk.vtkOutlineFilter()
-        self.outlineData.SetInputConnection(self.DataImport().GetOutputPort())
-
-        self.mapOutline = vtk.vtkPolyDataMapper()
-        self.mapOutline.SetInputConnection(self.outlineData.GetOutputPort())
-        
-        self.outline = vtk.vtkActor()
-        self.outline.SetMapper(self.mapOutline)
-        self.outline.GetProperty().SetColor(self.colors.GetColor3d('Red'))
-
-        return self.outline
-
-    def InitialiseMC(self, mctype = 'mc'):
-        self.aRenderer = vtk.vtkRenderer()
-        self.arenWin = vtk.vtkRenderWindow()
-        self.aCamera = vtk.vtkCamera()
-        self.iren = vtk.vtkRenderWindowInteractor()
-        
-        self.arenWin.AddRenderer(self.aRenderer)
-        
-        self.iren.SetRenderWindow(self.arenWin)
-
-        self.aCamera.SetViewUp(0, 0, -1)
-        self.aCamera.SetPosition(0, -1, 0)
-        self.aCamera.SetFocalPoint(0, 0, 0)
-        self.aCamera.ComputeViewPlaneNormal()
-        self.aCamera.Azimuth(30.0)
-        self.aCamera.Elevation(30.0)
-        
-        self.aRenderer.AddActor(self.Outline())
-        if mctype == 'dmc':
-            self.aRenderer.AddActor(self.DiscreteMarchingCubes())
-        else:
-            self.aRenderer.AddActor(self.MarchingCubes())
-        self.aRenderer.SetActiveCamera(self.aCamera)
-        self.aRenderer.ResetCamera()
-        self.aCamera.Dolly(1.5)
-
-        self.aRenderer.SetBackground(self.colors.GetColor3d("BkgColor"))
-        self.arenWin.SetSize(640, 480)
-
-        self.aRenderer.ResetCameraClippingRange()
-
-        self.iren.Initialize()
-        self.iren.Start()
-
-
-    def InitialiseStack(self, voltype='nc'):
-        self.renderer = vtk.vtkRenderer()
-        self.renderWin = vtk.vtkRenderWindow()
-        self.renderInteractor = vtk.vtkRenderWindowInteractor()
-
-        self.renderWin.AddRenderer(self.renderer)
-        self.renderInteractor.SetRenderWindow(self.renderWin)
-
-        if voltype == 'convert':
-            self.renderer.AddVolume(self.VTKVolume())
-        else:
-            self.renderer.AddVolume(self.Volume())
-
-        self.renderer.SetBackground(self.colors.GetColor3d("BkgColor"))
-        self.renderWin.SetSize(550,550)
-        self.renderWin.SetMultiSamples(4)
-
-        self.renderWin.Render()
-        self.renderInteractor.Start()
-
-    # threshold = vtk.vtkImageThreshold()
-    # threshold.SetInputConnection(dataImporter.GetOutputPort())
-    # threshold.ThresholdByLower(128)
-    # threshold.ReplaceInOn()
-    # threshold.SetInValue(0)
-    # threshold.ReplaceOutOn()
-    # threshold.SetOutValue(1)
-    # threshold.Update()
-
-    # dmc = vtk.vtkDiscreteMarchingCubes()
-    # dmc.SetInputConnection(threshold.GetOutputPort())
-    # dmc.GenerateValues(1,1,1)
-    # dmc.Update()
-
-class ModelProcessor():
-    def __init__(self, directory):
-        self.directory = directory
-    
-    # def get_program_parameters(self):
-    #     import argparse
-    #     self.description = 'Read a .stl file.'
-    #     self.epilogue = ''''''
-    #     self.parser = argparse.ArgumentParser(description=self.description, epilog=self.epilogue,
-    #                                           formatter_class=argparse.RawDescriptionHelpFormatter)
-    #     self.parser.add_argument('filename', help=self.filename)
-    #     self.args = self.parser.parse_args()
-    #     return self.args.filename
-
-    def Colors(self):
-        self.colors = vtk.vtkNamedColors()
-        return self.colors
-
-    def STLReader(self):
-        self.reader = vtk.vtkSTLReader()
-        self.reader.SetFileName(os.path.join(*self.directory.split(',')))
-        return self.reader
-
-    def Mapper(self):
-        self.mapper = vtk.vtkPolyDataMapper()
-        self.mapper.SetInputConnection(self.STLReader().GetOutputPort())
-        return self.mapper
-
-    def Actor(self):
-        self.actor = vtk.vtkActor()
-        self.actor.SetMapper(self.Mapper())
-        return self.actor
-
-    def Renderer(self):
-        self.ren = vtk.vtkRenderer()
-        self.renWin = vtk.vtkRenderWindow()
-        self.renWin.AddRenderer(self.ren)
-        self.ren.SetBackground(self.Colors().GetColor3d("black"))
-
-        # Create a renderwindowinteractor
-        self.iren = vtk.vtkRenderWindowInteractor()
-        self.iren.SetRenderWindow(self.renWin)
-
-        # Assign actor to the renderer
-        self.ren.AddActor(self.Actor())
-
-        # Enable user interface interactor
-        self.iren.Initialize()
-        self.renWin.Render()
-        self.iren.Start()
-
-if __name__ == "__main__":
-    directory = 'data,sample1,25,*.bmp'
-    directory2 = 'data,sample1,25'
-    directory3 = 'data,sample1,25.stl'
-    stack = ImageProcessor(directory)
-    stack.ImageImport()
-    stack.CreateVolume()
-    # plotHeatmap(stack.CreateVolume())
-    # stack.ShowImage()
-    # stack.CreateNifti()
-    vtkvis = VTKVisualiser(stack.CreateVolume())
-    # vtkvis.InitialiseStack(voltype='convert')
-    # print(stack.CreateVolume().shape)
-    # vtkvis.ShowThresholdImage()
-    # vtkvis.ShowImportedImage()
-    # vtkvis.ShowModifiedImage()
-    # vtkvis.plotHeatMap(np.rot90(stack.CreateVolume()[:,:,56]))#[stack.CreateVolume().shape[0], :, :])
-    # vtkvis.InitialiseStack()
-    # vtkvis.plotHeatMap()
-    # vtkvis.InitialiseMC()
-    # vtkvis.InitialiseMC('dmc')
-    # test = main(stack.CreateVolume())
-
-    # vtkvis.ConvertData()
-    newstack = ImageProcessor2(directory2)
-    # newstack.BMPImageReader()
-    newstack.InitialiseStack()
-    
-    # stlmodel = ModelProcessor(directory3)
-    # stlmodel.Renderer()
