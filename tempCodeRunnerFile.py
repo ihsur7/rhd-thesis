@@ -1,0 +1,1 @@
+ # self.reader.Allow8BitBMPOn()
