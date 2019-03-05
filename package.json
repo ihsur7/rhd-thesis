@@ -4,6 +4,7 @@
   "description": "",
   "main": "main.js",
   "scripts": {
+    "start": "electron .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -19,9 +20,5 @@
   "homepage": "https://github.com/abrafcukincadabra/rhd-thesis#readme",
   "devDependencies": {
     "electron": "^4.0.5"
-  },
-  "scripts": {
-    "start": "electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
   }
 }
