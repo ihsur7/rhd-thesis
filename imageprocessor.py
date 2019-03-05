@@ -155,36 +155,36 @@ class VTKVolume():
             self.renderInteractor.Start()
 
 class VTKMarchingCubes():
-    def __init__(self, inputdata, mctype, outline=True, threshold=0):
+    def __init__(self, inputdata, mctype, thresholdValue, outline=True):
         self.inputdata = inputdata
         self.outline = outline
         self.mctype = mctype
-        self.threshold = threshold
+        # self.threshold = threshold
+        self.thresholdValue = thresholdValue
         self.colors = vtk.vtkNamedColors()
 
-    def Threshold(self):
-        self.threshold = vtk.vtkImageThreshold()
+    # def Threshold(self):
+    #     self.threshold = vtk.vtkImageThreshold()
         
-        self.threshold.SetInputConnection(self.inputdata.GetOutputPort())
+    #     self.threshold.SetInputConnection(self.inputdata.GetOutputPort())
 
-        self.threshold.ThresholdByLower(self.threshold)
-        self.threshold.ReplaceInOn()
-        self.threshold.SetInValue(0)  # set all values below 400 to 0
-        self.threshold.ReplaceOutOn()
-        self.threshold.SetOutValue(1)  # set all values above 400 to 1
-        # self.threshold.Update()
-        # print(self.threshold)
-        return self.threshold
+    #     self.threshold.ThresholdByLower(self.threshold)
+    #     self.threshold.ReplaceInOn()
+    #     self.threshold.SetInValue(0)  # set all values below 400 to 0
+    #     self.threshold.ReplaceOutOn()
+    #     self.threshold.SetOutValue(1)  # set all values above 400 to 1
+    #     # self.threshold.Update()
+    #     # print(self.threshold)
+    #     return self.threshold
 
     def MarchingCubes(self):
         self.partExtractor = vtk.vtkMarchingCubes()
         self.partStripper = vtk.vtkStripper()
         self.partMapper = vtk.vtkPolyDataMapper()
-
         # self.partExtractor.SetInputConnection(self.DataImport().GetOutputPort())
         self.partExtractor.SetInputConnection(self.inputdata.GetOutputPort())
-        # self.partExtractor.ComputeNormalsOn()
-        self.partExtractor.SetValue(0, 0.01)
+        self.partExtractor.ComputeNormalsOn()
+        self.partExtractor.SetValue(0, 10)
 
         self.partStripper.SetInputConnection(self.partExtractor.GetOutputPort())
 
@@ -201,7 +201,9 @@ class VTKMarchingCubes():
         self.partExtractor = vtk.vtkDiscreteMarchingCubes()
         self.partMapper = vtk.vtkPolyDataMapper()
 
-        self.partExtractor.SetInputConnection(self.Threshold().GetOutputPort())
+        self.partExtractor.SetInputConnection(VTKThreshold(self.inputdata, self.thresholdValue).Threshold().GetOutputPort())
+
+        # self.partExtractor.SetInputConnection(self.Threshold().GetOutputPort())
         self.partExtractor.GenerateValues(1,1,1)
         self.partExtractor.Update()
 
@@ -274,6 +276,25 @@ class VTKOutline():
 
         return self.outline
 
+class VTKThreshold():
+    def __init__(self, inputdata, threshold):
+        self.threshold = threshold
+        self.inputdata = inputdata
+
+    def Threshold(self):
+        self.threshold = vtk.vtkImageThreshold()
+        
+        self.threshold.SetInputConnection(self.inputdata.GetOutputPort())
+
+        self.threshold.ThresholdByLower(self.threshold)
+        self.threshold.ReplaceInOn()
+        self.threshold.SetInValue(0)  # set all values below 400 to 0
+        self.threshold.ReplaceOutOn()
+        self.threshold.SetOutValue(1)  # set all values above 400 to 1
+        # self.threshold.Update()
+        # print(self.threshold)
+        return self.threshold
+
 class ModelProcessor():
     def __init__(self, directory):
         self.directory = directory
@@ -332,8 +353,8 @@ if __name__ == "__main__":
 
     newstack = ImageProcessor2(directory2).BMPImageReader()
     startVTK = VTKVolume(newstack, outline=True)
-    startVTK.Render()
-    startmc = VTKMarchingCubes(newstack, mctype='mc', outline=True, threshold=100)
+    # startVTK.Render()
+    startmc = VTKMarchingCubes(newstack, mctype='mc', thresholdValue=400, outline=True)
     startmc.Render()
     
     # stlmodel = ModelProcessor(directory3)
