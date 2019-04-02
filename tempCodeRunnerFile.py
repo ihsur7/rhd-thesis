@@ -1,1 +1,2 @@
- # self.reader.Allow8BitBMPOn()
+rocessor(directory3)
+    stlmodel.Renderer()

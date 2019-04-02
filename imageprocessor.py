@@ -353,12 +353,12 @@ if __name__ == "__main__":
 
     newstack = ImageProcessor2(directory2).BMPImageReader()
     startVTK = VTKVolume(newstack, outline=True)
-    # startVTK.Render()
+    startVTK.Render()
     startmc = VTKMarchingCubes(newstack, mctype='mc', thresholdValue=400, outline=True)
     startmc.Render()
     
-    # stlmodel = ModelProcessor(directory3)
-    # stlmodel.Renderer()
+    stlmodel = ModelProcessor(directory3)
+    stlmodel.Renderer()
 
 '''Legacy Code
 class VTKVisualiser():
@@ -423,3 +423,8 @@ class VTKVisualiser():
         # print(self.dataImporter.GetOutput())
         return self.dataImporter
 '''
+
+# Mayavi 2 for GUI
+# Traits for GUI
+# Smili, milx qt
+# mitk, openSIM
