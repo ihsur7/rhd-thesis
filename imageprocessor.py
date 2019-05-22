@@ -12,6 +12,12 @@ import plotly.plotly as py
 import plotly.graph_objs as go
 import warnings
 
+import geomdl
+import networkx
+import scipy
+import trimesh
+import pymesh
+
 from pyevtk.hl import gridToVTK
 
 # py.tools.set_credentials_file(username='abrafcukincadabra', api_key='B0bzzqaiK7bXw4c1zaVZ')
@@ -346,10 +352,55 @@ class ModelProcessor():
         self.renWin.Render()
         self.iren.Start()
 
+class STLToObj():
+    def __init__(self, directory):
+        self.directory = directory
+    
+    def LoadSTL(self):
+        self.meshfile = pymesh.meshio.load_mesh(os.path.join(*self.directory.split(',')))
+        pymesh.meshio.save_mesh("stlconvert.obj", self.meshfile)
+
+class GeomdlVoxeliser():
+    def __init__(self, directory):
+        self.directory = directory
+
+    def LoadMesh(self):
+        self.mesh = geomdl.exchange.import_obj(self.directory)
+        return self.mesh
+    
+    def Voxeliser(self):
+        self.voxeliser = geomdl.voxelize.voxelize(self.mesh)
+        return self.voxeliser
+    
+    def VTKConnect(self):
+        vtkexport = geomdl.exchange_vtk.export_polydata(self.voxeliser, "vtkexport.vtk")
+
+    def VTKVisualise(self):
+        visualise = geomdl.visualization.VisVTK.VisVoxel()
+
+class TrimeshVoxelizer():
+    def __init__(self, directory):
+        self.directory = directory
+
+    def LoadMesh(self):
+        self.mesh = trimesh.load_mesh(os.path.join(*self.directory.split(',')))
+        return self.mesh
+    
+    def MeshCheck(self):
+        self.samplemesh = self.LoadMesh()
+        if self.samplemesh.is_watertight == True:
+            print('Mesh is watertight')
+        
+        else:
+            print('Mesh is NOT watertight')
+        return self.samplemesh
+        
+
 if __name__ == "__main__":
     directory = 'data,sample1,25,*.bmp'
     directory2 = 'data,sample1,25,'
     directory3 = 'data,sample1,25.stl'
+    directory4 = 'data,sample1,25.obj'
 
     newstack = ImageProcessor2(directory2).BMPImageReader()
     startVTK = VTKVolume(newstack, outline=True)
@@ -359,6 +410,10 @@ if __name__ == "__main__":
     
     stlmodel = ModelProcessor(directory3)
     stlmodel.Renderer()
+
+    trimeshtest = TrimeshVoxelizer(directory3).MeshCheck()
+
+    
 
 '''Legacy Code
 class VTKVisualiser():
