@@ -373,10 +373,10 @@ class GeomdlVoxeliser():
         return self.voxeliser
     
     def VTKConnect(self):
-        vtkexport = geomdl.exchange_vtk.export_polydata(self.voxeliser, "vtkexport.vtk")
+        self.vtkexport = geomdl.exchange_vtk.export_polydata(self.voxeliser, "vtkexport.vtk")
 
     def VTKVisualise(self):
-        visualise = geomdl.visualization.VisVTK.VisVoxel()
+        self.visualise = geomdl.visualization.VisVTK.VisVoxel().render()
 
 class TrimeshVoxelizer():
     def __init__(self, directory):
@@ -411,7 +411,8 @@ if __name__ == "__main__":
     stlmodel = ModelProcessor(directory3)
     stlmodel.Renderer()
 
-    trimeshtest = TrimeshVoxelizer(directory3).MeshCheck()
+    # trimeshtest = TrimeshVoxelizer(directory3).MeshCheck()
+    voxelconvert = GeomdlVoxeliser(directory4).VTKVisualise()
 
     
 
