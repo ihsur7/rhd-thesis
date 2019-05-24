@@ -12,11 +12,12 @@ import plotly.plotly as py
 import plotly.graph_objs as go
 import warnings
 
+
+
 import geomdl
 import networkx
 import scipy
-import trimesh
-import pymesh
+# import trimesh
 
 from pyevtk.hl import gridToVTK
 
@@ -369,14 +370,16 @@ class GeomdlVoxeliser():
         return self.mesh
     
     def Voxeliser(self):
-        self.voxeliser = geomdl.voxelize.voxelize(self.mesh)
+        self.voxeliser = geomdl.voxelize(self.mesh)#geomdl.voxelize.voxelize(self.mesh)
         return self.voxeliser
     
     def VTKConnect(self):
         self.vtkexport = geomdl.exchange_vtk.export_polydata(self.voxeliser, "vtkexport.vtk")
 
     def VTKVisualise(self):
-        self.visualise = geomdl.visualization.VisVTK.VisVoxel().render()
+        self.voxelise = self.Voxeliser()
+        self.voxelise.vis = geomdl.visualization.VisVTK.VisVolume(config=geomdl.visualization.VisVTK.VisConfig())
+        self.voxelise.render()
 
 class TrimeshVoxelizer():
     def __init__(self, directory):
@@ -405,14 +408,14 @@ if __name__ == "__main__":
     newstack = ImageProcessor2(directory2).BMPImageReader()
     startVTK = VTKVolume(newstack, outline=True)
     startVTK.Render()
-    startmc = VTKMarchingCubes(newstack, mctype='mc', thresholdValue=400, outline=True)
-    startmc.Render()
+    # startmc = VTKMarchingCubes(newstack, mctype='mc', thresholdValue=400, outline=True)
+    # startmc.Render()
     
-    stlmodel = ModelProcessor(directory3)
-    stlmodel.Renderer()
+    # stlmodel = ModelProcessor(directory3)
+    # stlmodel.Renderer()
 
     # trimeshtest = TrimeshVoxelizer(directory3).MeshCheck()
-    voxelconvert = GeomdlVoxeliser(directory4).VTKVisualise()
+    # voxelconvert = GeomdlVoxeliser(directory4).VTKVisualise()
 
     
 
