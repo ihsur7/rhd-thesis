@@ -1,21 +1,24 @@
 import imageprocessor as IP
-import pyflann
+# import pyflann
 import numpy as np
 import stl as mesh
 import os
-import pyassimp
+# import pyassimp
+
+import voxelization as vox
 
 directory = 'data,sample1,25,*.bmp'
 directory2 = 'data,sample1,25,'
 directory3 = 'data,sample1'
 directory4 = 'data,sample1,25.stl'
 
-newfile = IP.ImageProcessor2(directory2).BMPImageReader()
-vtk = IP.VTKVolume(newfile)
-vtk.Render()
+# newfile = IP.ImageProcessor2(directory2).BMPImageReader()
+# vtk = IP.VTKVolume(newfile)
+# vtk.Render()
 
+newmesh = vox.Voxelise(directory4).LoadMesh()
 
-voxelmodel = voxelization(os.path.join(*directory4.split(',')))
+# voxelmodel = voxelization(os.path.join(*directory4.split(',')))
 
 def voxelization(filename,outoutJsonPath = '../voxel-json/',outputNumpyPath = '../voxel-numpy/',coeff = 1.0,size = (192,192,200)):
     # if len(size) != 3:
