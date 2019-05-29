@@ -1,15 +1,17 @@
 import numpy as np
 import stl
 import os
+import pyflann
 
 directory4 = 'data,sample1,25.stl'
+outpath = 'data,sample1,'
 
 class Voxelise():
-    def __init__(self, directory, size = (192, 192, 200)):#, outpath, coeff, size):
+    def __init__(self, directory, outpath, coeff = 1.0, size = (192, 192, 200)):#, outpath, coeff, size):
         self.directory = directory
-        # self.outpath = outpath
-        # self.coeff = coeff
+        self.coeff = coeff
         self.size = size
+        self.outpath = outpath
 
     def LoadMesh(self):
         self.mesh = stl.Mesh.from_file(os.path.join(*self.directory.split(',')))
@@ -25,6 +27,9 @@ class Voxelise():
     def GetBoundingBox(self):
         self.xmax = self.ymax = self.zmax = self.xmin = self.ymin = self.zmin = None
         self.mesh_dims = self.LoadMesh().points
+        if len(self.mesh_dims) == 0:
+            print('Mesh has no points.')
+            return (0,0,0,0,0,0)
         for p in self.mesh_dims:
             if self.xmin is None:
                 self.xmin = p[stl.Dimension.X]
@@ -70,8 +75,58 @@ class Voxelise():
                                              self.voxel_z // 2 * self.edge])
 
         print("center: {0}, start: {1}".format(self.center, self.start))
+        
+        return self.start, self.edge, self.center, self.bbox, self.voxel_map
 
-        for index in range(self.mesh_count):
-            pass
+    def InitialiseVoxel(self):
+        self.vertices = self.LoadMesh().points
+        self.inimesh = self.InitialiseMesh()
+        self.startpoint = self.inimesh[0]
+        print("The mesh has vertices {}".format(self.vertices.shape))
 
-newmesh = Voxelise(directory4).InitialiseMesh()
+        self.flann = pyflann.FLANN()
+        self.params = self.flann.build_index(self.vertices, algorithm = "kdtree", trees = 4)
+        print(self.params)
+
+        self.x, self.y, self.z = self.inimesh[4].shape
+
+        self.landmark = self.coeff * self.inimesh[1]
+
+        for i in range(self.x):
+            for j in range(self.y):
+                for k in range(self.z):
+                    self.voxel_center = np.array([[
+                        self.startpoint[0] + i * self.inimesh[1],
+                        self.startpoint[1] + j * self.inimesh[1],
+                        self.startpoint[2] + k * self.inimesh[1]]], dtype=np.float32)
+                    self.result, self.dists = self.flann.nn_index(self.voxel_center, 1, checks = self.params["checks"])
+                    self.index = self.result[0]
+                    self.vertex = self.vertices[self.index,:]
+                    self.distance = np.sqrt(((self.vertex - self.voxel_center) ** 2).sum())
+
+                    if self.distance <= self.landmark:
+                        self.inimesh[4][i,j,k] = 1
+        
+        return self.inimesh[4]
+        
+    def VoxeliseMesh(self):
+
+        for l in range(len(self.LoadMesh().points)):
+            self.InitialiseVoxel()
+        
+        return self.inimesh
+    
+    def SaveVoxel(self, filename):
+        self.voxelise = self.VoxeliseMesh()
+        self.startPoint = 0
+        if self.filename.rfind("/") != -1:
+            self.startPoint = filename.rfind("/") + 1
+
+        self.filename = self.filename[self.startPoint:filename.rfind('.')]
+        np.save(os.path.join(self.outpath, self.filename) + ".npy", self.VoxeliseMesh())
+
+            
+
+        
+
+newmesh = Voxelise(directory4,outpath).VoxeliseMesh()
