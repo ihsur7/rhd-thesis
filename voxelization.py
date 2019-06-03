@@ -2,6 +2,7 @@ import numpy as np
 import stl
 import os
 import pyflann
+import pyassimp
 
 directory4 = 'data,sample1,25.stl'
 outpath = 'data,sample1,'
@@ -124,9 +125,70 @@ class Voxelise():
 
         self.filename = self.filename[self.startPoint:filename.rfind('.')]
         np.save(os.path.join(self.outpath, self.filename) + ".npy", self.VoxeliseMesh())
+ 
+def voxelise(filename,\
+             npoutpath = '../voxel-numpy/',\
+             jsonoutpath = '../voxel-json',\
+             coeff = 1.0, size = (192, 192, 200)):
+    voxel_width = size[0]
+    voxel_height = size[1]
+    voxel_length = size[2]
 
-            
+    voxel = np.zeros(shape = (voxel_width, voxel_height, voxel_length), dtype = np.int8)
 
-        
+    mesh = stl.Mesh.from_file(os.path.join(*directory.split(',')))
+    meshcount = len(mesh.points)
+
+    boundingbox = _getBoundingBox(mesh)
+
+    center = np.array([(boundingbox[0] + boundingbox[3])/2,
+                       (boundingbox[1] + boundingbox[4])/2,
+                       (boundingbox[2] + boundingbox[5])/2])
+
+    x_edge = (boundingbox[0] - boundingbox[3]) / voxel_width
+    y_edge = (boundingbox[1] - boundingbox[4]) / voxel_height
+    z_edge = (boundingbox[2] - boundingbox[5]) / voxel_length
+
+    edge = max(x_edge, y_edge, z_edge)
+
+    print("x_edge: {0}, y_edge: {1}, z_edge: {2}, edge: {3}".format(x_edge, y_edge, z_edge, edge))
+
+    start = center - np.array([voxel_width // 2 * edge,
+                               voxel_height // 2 * edge,
+                               voxel_length // 2 * edge])
+    
+    print("center: {0}, start: {1}".format(center, start))
+
+    for index in range(meshcount):
+        _meshVoxel(start, edge, mesh, voxel, coeff, str(index))
+    print("mesh voxelised")
+
+def _getBoundingBox(mesh):
+    xmax = ymax = zmax = xmin = ymin = zmin = None
+        mesh_dims = mesh.points
+        if len(mesh_dims) == 0:
+            print('Mesh has no points.')
+            return (0,0,0,0,0,0)
+        for p in mesh_dims:
+            if xmin is None:
+                xmin = p[stl.Dimension.X]
+                xmax = p[stl.Dimension.X]
+                ymin = p[stl.Dimension.Y]
+                ymax = p[stl.Dimension.Y]
+                zmin = p[stl.Dimension.Z]
+                zmax = p[stl.Dimension.Z]
+            else:
+                xmax = max(p[stl.Dimension.X], xmax)
+                xmin = min(p[stl.Dimension.X], xmin)
+                ymax = max(p[stl.Dimension.Y], ymax)
+                ymin = min(p[stl.Dimension.Y], ymin)
+                zmax = max(p[stl.Dimension.Z], zmax)
+                zmin = min(p[stl.Dimension.Z], zmin)
+        print(xmax, ymax, zmax, xmin, ymin, zmin)
+
+        return(xmax, ymax, zmax, xmin, ymin, zmin)
+
+def _meshVoxel(startpoint, edge, mesh, voxel, coeff = 1.0, str = "0"):
+
 
 newmesh = Voxelise(directory4,outpath).VoxeliseMesh()
