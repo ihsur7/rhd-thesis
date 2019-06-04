@@ -3,192 +3,134 @@ import stl
 import os
 import pyflann
 import pyassimp
-
-directory4 = 'data,sample1,25.stl'
-outpath = 'data,sample1,'
+import time
+import json
 
 class Voxelise():
-    def __init__(self, directory, outpath, coeff = 1.0, size = (192, 192, 200)):#, outpath, coeff, size):
+    def __init__(self, directory, outpath, coeff = 1.0, size = (192, 192, 200)):
         self.directory = directory
+        self.outpath = outpath
         self.coeff = coeff
         self.size = size
-        self.outpath = outpath
 
     def LoadMesh(self):
-        self.mesh = stl.Mesh.from_file(os.path.join(*self.directory.split(',')))
-        # print(self.mesh.points)
-        self.mesh_count = len(self.mesh.points)
-        # print(len(self.mesh.points))
-        # print(self.mesh.points[0])
-        # print(self.mesh.max_)
-        # print(self.mesh.get_mass_properties())
+        self.scene = pyassimp.load(self.directory)
+        self.mesh_count = len(self.scene.meshes)
+        print("Load Complete. Mesh Count: {}".format(self.mesh_count))
 
-        return self.mesh
-
-    def GetBoundingBox(self):
-        self.xmax = self.ymax = self.zmax = self.xmin = self.ymin = self.zmin = None
-        self.mesh_dims = self.LoadMesh().points
-        if len(self.mesh_dims) == 0:
-            print('Mesh has no points.')
+    def GetBoundingBox(self, scene):
+        if len(self.scene.meshes) == 0:
+            print("Scene's meshes attribute has no mesh.")
             return (0,0,0,0,0,0)
-        for p in self.mesh_dims:
-            if self.xmin is None:
-                self.xmin = p[stl.Dimension.X]
-                self.xmax = p[stl.Dimension.X]
-                self.ymin = p[stl.Dimension.Y]
-                self.ymax = p[stl.Dimension.Y]
-                self.zmin = p[stl.Dimension.Z]
-                self.zmax = p[stl.Dimension.Z]
-            else:
-                self.xmax = max(p[stl.Dimension.X], self.xmax)
-                self.xmin = min(p[stl.Dimension.X], self.xmin)
-                self.ymax = max(p[stl.Dimension.Y], self.ymax)
-                self.ymin = min(p[stl.Dimension.Y], self.ymin)
-                self.zmax = max(p[stl.Dimension.Z], self.zmax)
-                self.zmin = min(p[stl.Dimension.Z], self.zmin)
-        print(self.xmax, self.ymax, self.zmax, self.xmin, self.ymin, self.zmin)
 
-        return(self.xmax, self.ymax, self.zmax, self.xmin, self.ymin, self.zmin)
+        self.mesh_1 = self.scene.meshes[0]
+        xmax, ymax, zmax = np.amax(self.mesh_1.vertices, axis=0)
+        xmin, ymin, zmin = np.amin(self.mesh_1.vertices, axis=0)
 
-    def InitialiseMesh(self):
-        self.voxel_x = self.size[0]
-        self.voxel_y = self.size[1]
-        self.voxel_z = self.size[2]
+        for index in range(1, len(self.scene.meshes)):
+            mesh_t = scene.meshes[index]
+            xmax_t, ymax_t, zmax_t = np.amax(mesh_t.vertices, axis=0)
+            xmin_t, ymin_t, zmin_t = np.amin(mesh_t.vertices, axis=0)
 
-        self.voxel_map = np.zeros(shape=(self.voxel_x, self.voxel_y, self.voxel_z), dtype=np.int8)
-
-        self.bbox = self.GetBoundingBox()
-        self.center = np.array([(self.bbox[0] + self.bbox[3])/2,
-                                (self.bbox[1] + self.bbox[4])/2,
-                                (self.bbox[2] + self.bbox[5])/2])
-
-        self.x_edge = (self.bbox[0] - self.bbox[3]) / self.voxel_x
-        self.y_edge = (self.bbox[1] - self.bbox[4]) / self.voxel_y
-        self.z_edge = (self.bbox[2] - self.bbox[5]) / self.voxel_z
+            if xmax_t > xmax:
+                xmax = xmax_t
+            if ymax_t > ymax:
+                ymax = ymax_t
+            if zmax_t > zmax:
+                zmax = zmax_t
+            if xmin_t > xmin:
+                xmin = xmin_t
+            if ymin_t > ymin:
+                ymin = ymin_t
+            if zmin_t > zmin:
+                zmin = zmin_t
         
-        self.edge = max(self.x_edge, self.y_edge, self.z_edge)
-        print(self.center)
-        print ("x_edge: {0}, y_edge: {1}, z_edge: {2}, edge: {3}".format(
-        self.x_edge, self.y_edge, self.z_edge, self.edge))
-
-        self.start = self.center - np.array([self.voxel_x // 2 * self.edge,
-                                             self.voxel_y // 2 * self.edge,
-                                             self.voxel_z // 2 * self.edge])
-
-        print("center: {0}, start: {1}".format(self.center, self.start))
-        
-        return self.start, self.edge, self.center, self.bbox, self.voxel_map
-
-    def InitialiseVoxel(self):
-        self.vertices = self.LoadMesh().points
-        self.inimesh = self.InitialiseMesh()
-        self.startpoint = self.inimesh[0]
-        print("The mesh has vertices {}".format(self.vertices.shape))
-
-        self.flann = pyflann.FLANN()
-        self.params = self.flann.build_index(self.vertices, algorithm = "kdtree", trees = 4)
-        print(self.params)
-
-        self.x, self.y, self.z = self.inimesh[4].shape
-
-        self.landmark = self.coeff * self.inimesh[1]
-
-        for i in range(self.x):
-            for j in range(self.y):
-                for k in range(self.z):
-                    self.voxel_center = np.array([[
-                        self.startpoint[0] + i * self.inimesh[1],
-                        self.startpoint[1] + j * self.inimesh[1],
-                        self.startpoint[2] + k * self.inimesh[1]]], dtype=np.float32)
-                    self.result, self.dists = self.flann.nn_index(self.voxel_center, 1, checks = self.params["checks"])
-                    self.index = self.result[0]
-                    self.vertex = self.vertices[self.index,:]
-                    self.distance = np.sqrt(((self.vertex - self.voxel_center) ** 2).sum())
-
-                    if self.distance <= self.landmark:
-                        self.inimesh[4][i,j,k] = 1
-        
-        return self.inimesh[4]
-        
-    def VoxeliseMesh(self):
-
-        for l in range(len(self.LoadMesh().points)):
-            self.InitialiseVoxel()
-        
-        return self.inimesh
+        print("Bounding box: xmax: {0}, ymax: {1}, zmax:{2}, xmin: {3}, ymin: {4}, zmin: {5}".format(xmax, ymax, zmax, xmin, ymin, zmin))
+        return (xmax, ymax, zmax, xmin, ymin, zmin)
     
-    def SaveVoxel(self, filename):
-        self.voxelise = self.VoxeliseMesh()
-        self.startPoint = 0
-        if self.filename.rfind("/") != -1:
-            self.startPoint = filename.rfind("/") + 1
+    def MeshVoxel(self, startpoint, edge, mesh, voxel, str = '0'):
+        vertices = mesh.vertices
 
-        self.filename = self.filename[self.startPoint:filename.rfind('.')]
-        np.save(os.path.join(self.outpath, self.filename) + ".npy", self.VoxeliseMesh())
- 
-def voxelise(filename,\
-             npoutpath = '../voxel-numpy/',\
-             jsonoutpath = '../voxel-json',\
-             coeff = 1.0, size = (192, 192, 200)):
-    voxel_width = size[0]
-    voxel_height = size[1]
-    voxel_length = size[2]
+        print("The mesh {0} has vertices {1}".format(str, vertices.shape))
 
-    voxel = np.zeros(shape = (voxel_width, voxel_height, voxel_length), dtype = np.int8)
+        flann = pyflann.FLANN()
+        params = flann.build_index(vertices, algorithm = "kdtree", trees = 4)
 
-    mesh = stl.Mesh.from_file(os.path.join(*directory.split(',')))
-    meshcount = len(mesh.points)
+        width, height, length = voxel.shape
+        start_time = time.time()
+        landmark = self.coeff * edge
 
-    boundingbox = _getBoundingBox(mesh)
+        for x in range(width):
+            for y in range(height):
+                for z in range(length):
+                    voxel_center = np.array([[
+                        startpoint[0] + x * edge,
+                        startpoint[1] + y * edge,
+                        startpoint[2] + z * edge
+                    ]], dtype = np.float32)
 
-    center = np.array([(boundingbox[0] + boundingbox[3])/2,
-                       (boundingbox[1] + boundingbox[4])/2,
-                       (boundingbox[2] + boundingbox[5])/2])
+                    result, dists = flann.nn_index(voxel_center, 1, checks = params['checks'])
+                    index = result[0]
+                    vertex = vertices[index,:]
+                    distance = np.sqrt(((vertex - voxel_center) ** 2).sum())
 
-    x_edge = (boundingbox[0] - boundingbox[3]) / voxel_width
-    y_edge = (boundingbox[1] - boundingbox[4]) / voxel_height
-    z_edge = (boundingbox[2] - boundingbox[5]) / voxel_length
+                    if distance <= landmark:
+                        voxel[x,y,z] = 1
 
-    edge = max(x_edge, y_edge, z_edge)
+        print("The mesh {0} completed successfully in {1}s".format(str, (time.time()-start_time)))
 
-    print("x_edge: {0}, y_edge: {1}, z_edge: {2}, edge: {3}".format(x_edge, y_edge, z_edge, edge))
+    def SaveVoxel(self, filename, voxel):
+        startPoint = 0
+        # if filename.rfind("/") != 1:
+        #     startPoint = filename.rfind("/") + 1
 
-    start = center - np.array([voxel_width // 2 * edge,
-                               voxel_height // 2 * edge,
-                               voxel_length // 2 * edge])
+        # filename = filename[startPoint:filename.rfind('.')]
+        # np.save(os.path.join(self.outpath, filename) + ".npy", voxel)
+
+        array = voxel.reshape(-1,)
+        json_str = json.dumps(array.tolist())
+        json_file = open(os.path.join(self.outpath, filename) + ".json", "w+")
+        json_file.truncate()
+        json_file.write(json_str)
+        json_file.close()
     
-    print("center: {0}, start: {1}".format(center, start))
+    def Voxelisation(self):
+        voxel_width = self.size[0]
+        voxel_height = self.size[1]
+        voxel_length = self.size[2]
 
-    for index in range(meshcount):
-        _meshVoxel(start, edge, mesh, voxel, coeff, str(index))
-    print("mesh voxelised")
+        voxel = np.zeros(shape = (voxel_width, voxel_height, voxel_length), dtype = np.int8)
 
-def _getBoundingBox(mesh):
-    xmax = ymax = zmax = xmin = ymin = zmin = None
-        mesh_dims = mesh.points
-        if len(mesh_dims) == 0:
-            print('Mesh has no points.')
-            return (0,0,0,0,0,0)
-        for p in mesh_dims:
-            if xmin is None:
-                xmin = p[stl.Dimension.X]
-                xmax = p[stl.Dimension.X]
-                ymin = p[stl.Dimension.Y]
-                ymax = p[stl.Dimension.Y]
-                zmin = p[stl.Dimension.Z]
-                zmax = p[stl.Dimension.Z]
-            else:
-                xmax = max(p[stl.Dimension.X], xmax)
-                xmin = min(p[stl.Dimension.X], xmin)
-                ymax = max(p[stl.Dimension.Y], ymax)
-                ymin = min(p[stl.Dimension.Y], ymin)
-                zmax = max(p[stl.Dimension.Z], zmax)
-                zmin = min(p[stl.Dimension.Z], zmin)
-        print(xmax, ymax, zmax, xmin, ymin, zmin)
+        self.scene = pyassimp.load(self.directory)
+        meshcount = len(self.scene.meshes)
 
-        return(xmax, ymax, zmax, xmin, ymin, zmin)
+        boundingbox = self.GetBoundingBox(self.scene)
 
-def _meshVoxel(startpoint, edge, mesh, voxel, coeff = 1.0, str = "0"):
+        center = np.array([
+            (boundingbox[0] + boundingbox[3])/2,
+            (boundingbox[1] + boundingbox[4])/2,
+            (boundingbox[2] + boundingbox[5])/2
+        ])
+        x_edge = (boundingbox[0] - boundingbox[3]) / voxel_width
+        y_edge = (boundingbox[1] - boundingbox[4]) / voxel_height
+        z_edge = (boundingbox[2] - boundingbox[5]) / voxel_length
 
+        edge = max(x_edge, y_edge, z_edge)
+        print("x_edge: {0}, y_edge: {1}, z_edge: {2}, edge: {3}".format(x_edge, y_edge, z_edge, edge))
 
-newmesh = Voxelise(directory4,outpath).VoxeliseMesh()
+        start = center - np.array([
+            voxel_width // 2 * edge,
+            voxel_height // 2 * edge,
+            voxel_length // 2 * edge,
+        ])
+
+        print("center: {0}, start: {1}".format(center, start))
+
+        for index in range(meshcount):
+            self.MeshVoxel(start, edge, self.scene.meshes[index], voxel, str(index))
+        
+        print("Voxelisation completed.")
+
+        self.SaveVoxel("output", voxel)
+
+        return voxel
