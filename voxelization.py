@@ -79,7 +79,7 @@ class Voxelise():
 
         print("The mesh {0} completed successfully in {1}s".format(str, (time.time()-start_time)))
 
-    def SaveVoxel(self, filename, voxel):
+    def SaveVoxel(self, voxel):
         startPoint = 0
         # if filename.rfind("/") != 1:
         #     startPoint = filename.rfind("/") + 1

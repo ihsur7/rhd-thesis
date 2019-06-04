@@ -14,6 +14,7 @@ directory3 = '/data/sample1/'
 directory4 = '/data/sample1/25.stl'
 
 inputdir = direct.Directory(directory4,directory3)
-newmesh = vox.Voxelise(inputdir.InputDIR, inputdir.OutputDIR)
+print(inputdir.OutputDIR(), inputdir.InputDIR())
+newmesh = vox.Voxelise(inputdir.InputDIR(), inputdir.OutputDIR())
 
 newmesh.Voxelisation()
