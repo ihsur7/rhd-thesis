@@ -80,12 +80,12 @@ class Voxelise():
         print("The mesh {0} completed successfully in {1}s".format(str, (time.time()-start_time)))
 
     def SaveVoxel(self, filename, voxel):
-        startPoint = 0
+        # startPoint = 0
         # if filename.rfind("/") != 1:
         #     startPoint = filename.rfind("/") + 1
 
         # filename = filename[startPoint:filename.rfind('.')]
-        # np.save(os.path.join(self.outpath, filename) + ".npy", voxel)
+        np.save(os.path.join(self.outpath, filename) + ".npy", voxel)
 
         array = voxel.reshape(-1,)
         json_str = json.dumps(array.tolist())
@@ -93,6 +93,16 @@ class Voxelise():
         json_file.truncate()
         json_file.write(json_str)
         json_file.close()
+
+    def SaveVoxel2(self, voxel):
+        startPoint = 0
+        filename = self.directory
+        if filename.rfind('/') != -1:
+            startPoint = filename.rfind('/') + 1
+
+        filename = filename[startPoint:filename.rfind('.')]
+        print(filename)
+        
     
     def Voxelisation(self):
         voxel_width = self.size[0]
