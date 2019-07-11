@@ -130,6 +130,7 @@ def single_sample(dat_in):
     lengths_1 = lengths_1[grab1]
     grab2 = lengths_2 >= min_length
     lengths_2 = lengths_2[grab2]
+    print(lengths_1, lengths_2)
     #save data
     dat = {}
     dat['xs'] = xs*scale
