@@ -1,7 +1,7 @@
 import os
 
 class Directory():
-    def __init__(self, input_str, output_str):
+    def __init__(self, input_str, output_str=None):
         self.input_str = input_str
         self.output_str = output_str
     
