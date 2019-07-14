@@ -55,18 +55,41 @@ def plot(outfolder, data):
                  [['12-lx', '12-nx'], ['12-ly', '12-ny'], ['12-lz', '12-nz']],
                  [['16-lx', '16-nx'], ['16-ly', '16-ny'], ['16-lz', '16-nz']],
                  [['20-lx', '20-nx'], ['20-ly', '20-ny'], ['20-lz', '20-nz']]]
-    for i in itemlist1:
-        for j in i:
+    itemlist2 = [[['0-lx', '4-lx', '8-lx', '12-lx', '16-lx', '20-lx'], ['0-nx', '4-nx', '8-nx', '12-nx', '16-nx', '20-nx']],
+                 [['0-ly', '4-ly', '8-ly', '12-ly', '16-ly', '20-ly'], ['0-ny', '4-ny', '8-ny', '12-ny', '16-ny', '20-ny']],
+                 [['0-lz', '4-lz', '8-lz', '12-lz', '16-lz', '20-lz'], ['0-nz', '4-nz', '8-nz', '12-nz', '16-nz', '20-nz']]]
+    # for i in itemlist1:
+    #     for j in i:
+    #         plt.figure()
+    #         line1 = data['psd'][j[0]+'.tif']
+    #         line2 = data['psd'][j[1]+'.tif']
+    #         plt.plot(line1.R, line1.cdf, label='L')
+    #         plt.plot(line2.R, line2.cdf, label='N')
+    #         plt.xlabel('invasion size [mm]')
+    #         plt.ylabel('volume fraction invaded')
+    #         plt.legend()
+    #         plt.title(j)
+    #         plt.savefig(outfolder+j[0]+j[-1]+'.png', dpi=300)
+    for k in itemlist2:
+        for l in k:
             plt.figure()
-            line1 = data['psd'][j[0]+'.tif']
-            line2 = data['psd'][j[1]+'.tif']
-            plt.plot(line1.R, line2.cdf, label='L')
-            plt.plot(line2.R, line2.cdf, label='N')
+            line1 = data['psd'][l[0]+'.tif']
+            line2 = data['psd'][l[1]+'.tif']
+            line3 = data['psd'][l[2]+'.tif']
+            line4 = data['psd'][l[3]+'.tif']
+            line5 = data['psd'][l[4]+'.tif']
+            line6 = data['psd'][l[5]+'.tif']
+            plt.plot(line1.R, line1.cdf, label='W0')
+            plt.plot(line2.R, line2.cdf, label='W4')
+            plt.plot(line3.R, line3.cdf, label='W8')
+            plt.plot(line4.R, line4.cdf, label='W12')
+            plt.plot(line5.R, line5.cdf, label='W16')
+            plt.plot(line6.R, line6.cdf, label='W20')
             plt.xlabel('invasion size [mm]')
             plt.ylabel('volume fraction invaded')
             plt.legend()
-            plt.title(j)
-            plt.savefig(outfolder+j[0]+'.png', dpi=300)
+            plt.title(l)
+            plt.savefig(outfolder+l[0]+l[-1]+'.png', dpi=300)
     
     return
 
