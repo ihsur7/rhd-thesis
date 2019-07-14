@@ -48,7 +48,7 @@ def analyse(data):
 
 def plot(outfolder, data):
     # 0-x
-    itemlist = ['20-lx', '20-nx']
+    # itemlist = ['20-lx', '20-nx']
     itemlist1 = [[['0-lx', '0-nx'], ['0-ly', '0-ny'], ['0-lz', '0-nz']],
                  [['4-lx', '4-nx'], ['4-ly', '4-ny'], ['4-lz', '4-nz']],
                  [['8-lx', '8-nx'], ['8-ly', '8-ny'], ['8-lz', '8-nz']],
@@ -63,12 +63,30 @@ def plot(outfolder, data):
             plt.plot(line1.R, line2.cdf, label='L')
             plt.plot(line2.R, line2.cdf, label='N')
             plt.xlabel('invasion size [mm]')
-            plt.ylabel('volume fraction invaded [mm]')
+            plt.ylabel('volume fraction invaded')
             plt.legend()
             plt.title(j)
             plt.savefig(outfolder+j[0]+'.png', dpi=300)
-        
-    # line1 = data['psd'][itemlist[0]+'.tif']
+    
+    return
+
+
+if __name__ == "__main__":
+    folder = '/data/downsample-2048-man-thres/'
+    outfolder = '/data/output/'
+    workdir = dct.Directory(folder,outfolder)
+    data = {}
+    input_files = load_data(workdir.InputDIR(), data)#, resize=[500, 500])
+    filtered = apply_filter(input_files)
+    analysed = analyse(filtered)
+    plot(workdir.OutputDIR(), analysed)
+    # print(data['lt'])
+    # print(data['psd'])
+
+#data = {'input':{'0-lx.tif':[array], '0-ly.tif':[array]}, 'lt':{etc}}
+
+
+  # line1 = data['psd'][itemlist[0]+'.tif']
     # line2 = data['psd'][itemlist[1]+'.tif']
     # plt.plot(line1.R, line1.cdf, label='L')
     # plt.plot(line2.R, line2.cdf, label='N')
@@ -109,20 +127,3 @@ def plot(outfolder, data):
     #     plt.title(x)
     #     plt.savefig(outfolder+x.replace('.tif', '.png'), dpi=300)
     # fig = plt.plot(data['psd']['0-lx.tif'].
-    
-    return
-
-
-if __name__ == "__main__":
-    folder = '/data/downsample-2048-man-thres/'
-    outfolder = '/data/output/'
-    workdir = dct.Directory(folder,outfolder)
-    data = {}
-    input_files = load_data(workdir.InputDIR(), data)#, resize=[500, 500])
-    filtered = apply_filter(input_files)
-    analysed = analyse(filtered)
-    plot(workdir.OutputDIR(), analysed)
-    # print(data['lt'])
-    # print(data['psd'])
-
-#data = {'input':{'0-lx.tif':[array], '0-ly.tif':[array]}, 'lt':{etc}}
