@@ -81,6 +81,7 @@ def single_sample(dat_in):
     ys = np.linspace(y1, y2, num=ns)
     #grab the ones that lie within our bounding box
     grab = ((xs >= 0) & (xs <= x[-1])) & ((ys >= 0) & (ys <= y[-1]))
+    print(grab)
     if np.all(grab == False):
         return False
     xs = xs[grab]
@@ -95,25 +96,28 @@ def single_sample(dat_in):
     while (zs[start_id] == zs[0]) and (start_id < ns-1):
         start_id += 1
         stop_id = ns -1
-        while (zs[stop_id] == zs[-1]) and (stop_id > 0):
-            stop_id -= 1
-            stop_id += 2
-            if (start_id > stop_id):
-                return False
-            #get the sizes of pores between start and stop
-            sample = []
-            val = zs[start_id]
+        print(start_id, stop_id)
+    while (zs[stop_id] == zs[-1]) and (stop_id > 0):
+        start_id -= 1
+        stop_id += 2
+    if (start_id > stop_id):
+        return False
+    #get the sizes of pores between start and stop
+    print(start_id, stop_id)
+    sample = []
+    val = zs[start_id]
+    count = 1
+    for i in range(start_id+1, stop_id):
+        if zs[i] == val:
+            count += 1
+        else:
+            sample.append([count, val])
+            val = zs[i]
             count = 1
-            for i in range(start_id+1, stop_id):
-                if zs[i] == val:
-                    count += 1
-                else:
-                    sample.append([count, val])
-                    val = zs[i]
-                    count = 1
-            if not sample:
-                return False
+    if not sample:
+        return False
     sample = np.array(sample)
+    print(sample)
     #the two types of data
     v1 = sample[:,1].min()
     v2 = sample[:,1].max()
@@ -141,7 +145,7 @@ def single_sample(dat_in):
     print(dat['lengths'])
     return dat
 
-def get_samples(z, N=1, ds=1, scale=1.0, min_length=1, res=4, random=False):
+def get_samples(z, N=2, ds=1, scale=1.0, min_length=1, res=4, random=False):
     """
     given image data get N random samples
     z: image data
@@ -169,16 +173,24 @@ def get_samples(z, N=1, ds=1, scale=1.0, min_length=1, res=4, random=False):
     for i, line in enumerate(lines):
         dat = {"x":x, "y":y, "f":f, "scale":scale, "min_length":min_length, "res":res, "line":line}
         dat_in.append(dat)
+    print(dat_in)
     for i, d in enumerate(dat_in):
-        print("line %i"%(i+1))
+        # print("line %i"%(i+1))
         dat = single_sample(d)
         if dat:
             data["samples"].append(dat)
+            print(data)
+        else:
+            print("not dat")
+    # print("dat:", dat)
+    # print("dat_in:", dat_in)
+    # print(data)
     del dat_in
     return data
 
 def collate(data, bin_width):
     """collate the data for saving"""
+    # print(data)
     data["collated"] = {}
     dc = data["collated"]
     names = ['lo', 'hi']
@@ -186,7 +198,8 @@ def collate(data, bin_width):
         lengths = []
         for d in data["samples"]:
             lengths.extend(d["lengths"][i])
-        analysis(lengths, bin_width, dc, name)
+            print(lengths)
+    analysis(lengths, bin_width, dc, name) 
     dc["relative density"] = [data["relative density"]]
     return
 
@@ -213,7 +226,7 @@ def analysis(lengths, bin_width, dc, name):
     wm = np.sum(mean_bins*contribution)
     dc["c_mean_"+name] = [wm]
     dc["c_std_"+name] [np.sqrt(np.sum(contribution*(mean_bins- wm)**2))]
-    return
+    return 
 
 def save_csv(data, name):
     """save to csv format"""
@@ -287,6 +300,7 @@ def process(q):
     print("done")
     print("analysing")
     data = get_samples(z, ds=q["ds"], scale=q["scale"], min_length=q["min_length"], random=False)
+    # print(data)
     print("done")
     #save data
     q["data"] = data
@@ -371,14 +385,14 @@ def group_statistics(Q, bin_width):
 
 
 if __name__ == "__main__":
-    bin_width = 20
+    bin_width = 10#20
     df = {}
     df["bin_width"] = bin_width
-    df["min_size"] = 15
-    df["threshold"] = 160
+    df["min_size"] = 5 #15
+    df["threshold"] = 150
     df["ds"] = 38
-    df["scale"] =  2.1367521
-    df["min_length"] = 5.0
+    df["scale"] =  1.0 #2.1367521
+    df["min_length"] = 2.0 #5.0
     df["dpi"] = 600
     df["custom"] = []
     df["line_width"] = 0.3
@@ -387,10 +401,10 @@ if __name__ == "__main__":
 
     Q = []
     q = deepcopy(df)
-    q["folder"] = r"D:"
+    q["folder"] = r"D:\downsample"
     q["save_folder"] = "data"
     # q["threshold"] = 160 #code for altering the threshold for this folder
-    q["custom"] = [{"image":"0-lx.tif", "threshold":160}]
+    q["custom"] = [{"image":"0-lx.tif", "threshold":150}]
     Q.append(q)
     Q = preprocess(Q)
     run(Q)
