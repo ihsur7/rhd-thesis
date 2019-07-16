@@ -40,7 +40,7 @@ def apply_filter(data):
 
 def analyse(data):
     data['psd'] = {}
-    vox = 2048.0*774.0/5278.0
+    vox = 5278.0*774.0/5278.0
     for item, value in data['lt'].items():
         data['psd'][str(item)] = ps.metrics.pore_size_distribution(value, log=False, voxel_size=1.0/vox)
 
@@ -95,8 +95,8 @@ def plot(outfolder, data):
 
 
 if __name__ == "__main__":
-    folder = '/data/downsample-2048-man-thres/'
-    outfolder = '/data/output/'
+    folder = 'H:/_HDR/sample-images/images/original/cropped/smoothed/enhanced-constrast/man-thres/sqcrop/'#'/data/downsample-2048-man-thres/'
+    outfolder = '/data/output/hires'
     workdir = dct.Directory(folder,outfolder)
     data = {}
     input_files = load_data(workdir.InputDIR(), data)#, resize=[500, 500])
