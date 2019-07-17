@@ -79,14 +79,16 @@ def single_sample(dat_in):
     ns = int(res)*int(max(abs(x2 - x1), (abs(y1 - y2))))
     xs = np.linspace(x1, x2, num=ns)
     ys = np.linspace(y1, y2, num=ns)
+    print(ns, xs, ys)
     #grab the ones that lie within our bounding box
     grab = ((xs >= 0) & (xs <= x[-1])) & ((ys >= 0) & (ys <= y[-1]))
-    print(grab)
+    print("grab ", grab)
     if np.all(grab == False):
         return False
     xs = xs[grab]
     ys = ys[grab]
     ns = xs.size
+    print(ns)
     xys = np.zeros((ns,2))
     xys[:,0] = ys
     xys[:,1] = xs
@@ -97,11 +99,11 @@ def single_sample(dat_in):
         start_id += 1
         stop_id = ns -1
         print(start_id, stop_id)
-    while (zs[stop_id] == zs[-1]) and (stop_id > 0):
-        start_id -= 1
-        stop_id += 2
-    if (start_id > stop_id):
-        return False
+        while (zs[stop_id] == zs[-1]) and (stop_id > 0):
+            stop_id -= 1
+            stop_id += 2
+        if (start_id > stop_id):
+            return False
     #get the sizes of pores between start and stop
     print(start_id, stop_id)
     sample = []

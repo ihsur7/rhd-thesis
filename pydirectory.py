@@ -10,6 +10,8 @@ class Directory():
         return input_path
 
     def OutputDIR(self):
+        if not os.path.exists(os.path.join(*self.output_str.split('/'))):
+            os.makedirs(os.path.join(*self.output_str.split('/')))
         output_path = os.path.join(*self.output_str.split('/'))
         return output_path
         
