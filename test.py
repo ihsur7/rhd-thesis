@@ -1,3 +1,43 @@
+# a = [False, True, False]
+# a= list(filter(lambda x: x == True, a))
+# print(a)
+
+# a = '0-lx.tif'
+# print(a[:-4])
+
+# class Data():
+#     def __init__(self):
+#         self.data = {}
+
+# a = Data()
+# print(type(a.data), a.data)
+
+# a.data["raw_data"] = range(5)
+# print(a.data)
+
+import scipy as sp
+import scipy.ndimage as ndimage
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+size = (100,100)
+
+im = np.random.randint(0, 2, size=size)
+dt = ndimage.distance_transform_edt(im > 0)
+dt2 = ndimage.distance_transform_edt(im)
+print(im)
+print(dt)
+print(dt2)
+fig, ax = plt.subplots(nrows=1, ncols=3, figsize=[5,5], constrained_layout=True)
+for i,j in zip(ax.flat, [im, dt, dt2]):
+    im2 = i.imshow(j)
+fig.colorbar(im2, ax=ax.flat)
+
+# plt.tight_layout(True)
+plt.show()
+
+'''
 def main(stack):
     colors = vtk.vtkNamedColors()
 
@@ -49,3 +89,5 @@ def main(stack):
     # ren1.GetActiveCamera().Elevation(30)
     renWin.Render()
     iren.Start()
+
+    '''
