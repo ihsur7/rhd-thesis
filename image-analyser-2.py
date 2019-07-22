@@ -67,6 +67,12 @@ class AnalyseImage():
         self.data = data
         self.sizes = sizes
         self.mode = mode
+    
+    def GetEdges(self, )
+
+    def LocalThickness2(self, im):
+        dt = sp.ndimage.distance_transform_edt(im)
+        
 
     def LocalThickness(self, im, inlets = None):
         #based on Porespy
