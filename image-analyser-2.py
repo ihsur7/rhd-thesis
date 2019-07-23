@@ -211,8 +211,7 @@ class Statistics():
         return self.data
     
     def PoreDistribution(self, bins=10, log=True, voxel_size=1):
-        self.data["psd"] = {}
-        voxel_size = 
+        self.data["psd"] = {} 
         for i in self.data["local_thickness"]:
             voxel_size = self.data["raw_data"][i].shape
             im = self.data["local_thickness"][i]
@@ -229,10 +228,10 @@ if __name__ == "__main__":
     # print(data)
     imf = Filters(data, 15, "median").ApplyFilter()
     # print(data)
-    lt = AnalyseImage(data, sizes = 25, mode = "dt").Analyse()
+    lt = AnalyseImage(data, sizes = 25, mode = "hybrid").Analyse()
     # print(data)
     Plot(data, layer = '0-lx').Plot()
-    stats = Statistics(data)
-    stats.GetPorosity()
-    stats.PoreDistribution(log=False)
-    print(data["psd"])
+    # stats = Statistics(data)
+    # stats.GetPorosity()
+    # stats.PoreDistribution(log=False)
+    # print(data["psd"])

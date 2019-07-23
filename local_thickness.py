@@ -24,6 +24,8 @@ def getedge(shape, thickness=1, return_indices=False):
 def getcircle(radius):
     return skim.disk(radius, dtype=bool)
 
+in_size = np.logspace(start=np.log10(np.amax(dt)), stop=0, num=50)
+
 # a = getedge(im.shape)
 # b = sp.where(a)
 # print(b)
@@ -38,6 +40,7 @@ for i in a:
     if sp.any(imtemp):
         imtemp = sp.ndimage.distance_transform_edt(~imtemp) < i
         # print(imtemp)
+        print(imresults[(imresults==0)*imtemp])
         imresults[(imresults == 0)*imtemp] = i
 
 # print(imresults)
