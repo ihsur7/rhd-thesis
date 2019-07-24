@@ -190,6 +190,9 @@ class Plot():
         plt.tight_layout(True)
         plt.show()
         # print(titlelist2, imgdata)
+    def PlotChart(self):
+        
+        return
 
 class Statistics():
     def __init__(self, data):
@@ -201,8 +204,8 @@ class Statistics():
             self.data["porosity"][i] = {}
             im = sp.array(self.data["filter"][i], dtype=bool)
             pore = sp.sum(im == 0)
-            mat = sp.sum(im == 1)
-            porosity = round(pore/(mat + pore), 3)
+            surf = sp.sum(im == 1)
+            porosity = round(pore/(surf + pore), 3)
             surface = round(1.0 - porosity, 3)
             
             self.data["porosity"][i]["surface"] = surface
@@ -211,15 +214,15 @@ class Statistics():
         return self.data
     
     def PoreDistribution(self, bins=10, log=True, voxel_size=1):
-        self.data["psd"] = {} 
+        self.data["psd"] = {}
         for i in self.data["local_thickness"]:
-            voxel_size = self.data["raw_data"][i].shape
+            # voxel_size = self.data["raw_data"][i].shape
             im = self.data["local_thickness"][i]
             dat = ps.metrics.pore_size_distribution(im=im, bins=bins, log=log, voxel_size=voxel_size)
             self.data["psd"][i] = dat
         return self.data
 
-    
+
 
 
 if __name__ == "__main__":
