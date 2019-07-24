@@ -4,12 +4,18 @@ import scipy.ndimage
 import skimage.morphology as skim
 import matplotlib.pyplot as plt
 
-size = (10,10)
+size = (50,50)
 
-im = np.random.randint(0, 2, size=size)
+# im = np.random.randint(0, 2, size=size)
+
+im = np.array([[0, 1, 0, 0, 1],
+                [1, 0, 1, 1, 0],
+                [0, 1, 1, 0, 1],
+                [1, 0, 0, 0, 1],
+                [0, 0, 1, 1, 1]])
 
 dt = sp.ndimage.distance_transform_edt(im > 0)
-print(dt)
+# print(dt)
 
 def getedge(shape, thickness=1, return_indices=False):
         t = thickness
@@ -24,24 +30,26 @@ def getedge(shape, thickness=1, return_indices=False):
 def getcircle(radius):
     return skim.disk(radius, dtype=bool)
 
-in_size = np.logspace(start=np.log10(np.amax(dt)), stop=0, num=50)
+in_size = np.logspace(start=np.log10(np.amax(dt)), stop=0, num=5)
 
 # a = getedge(im.shape)
 # b = sp.where(a)
 # print(b)
 
-a = np.logspace(start=np.log10(np.amax(dt)), stop=0, num=5)
+a = np.logspace(start=np.log10(np.amax(dt)), stop=0, num=3)
 # print(a)
 imresults = np.zeros(np.shape(im))
 for i in a:
     imtemp = dt >= i
-    print(imtemp)
-    print(~imtemp)
+#     print(imtemp)
+#     print(~imtemp)
     if sp.any(imtemp):
         imtemp = sp.ndimage.distance_transform_edt(~imtemp) < i
         # print(imtemp)
-        print(imresults[(imresults==0)*imtemp])
+        # print(imresults[(imresults==0)*imtemp])
+        # print(imresults==0)
         imresults[(imresults == 0)*imtemp] = i
+        print(imresults)
 
 # print(imresults)
 
