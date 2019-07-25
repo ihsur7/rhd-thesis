@@ -190,8 +190,8 @@ class Plot():
         plt.tight_layout(True)
         plt.show()
         # print(titlelist2, imgdata)
-    def PlotChart(self):
-        
+    def PlotChart(self, ctype="line", dtype="cdf"):
+                
         return
 
 class Statistics():
@@ -233,8 +233,9 @@ if __name__ == "__main__":
     # print(data)
     lt = AnalyseImage(data, sizes = 25, mode = "hybrid").Analyse()
     # print(data)
-    Plot(data, layer = '0-lx').Plot()
-    # stats = Statistics(data)
+    stats = Statistics(data)
     # stats.GetPorosity()
-    # stats.PoreDistribution(log=False)
+    stats.PoreDistribution(log=False)
+    plt.plot(data["psd"].R, data["psd"].pdf)
+    plt.show()
     # print(data["psd"])
