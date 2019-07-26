@@ -13,6 +13,7 @@ import os
 class Data():
     def __init__(self):
         self.data = {}
+        self.preferences = {}
 
 class ImageImporter():
     def __init__(self, data, inputdir, importall = False, layer = None):
@@ -217,6 +218,8 @@ class Statistics():
         self.data["psd"] = {}
         for i in self.data["local_thickness"]:
             # voxel_size = self.data["raw_data"][i].shape
+            scaling = 774/5278
+            voxel_size=1/ (self.data["raw_data"][i].shape[0] * scaling)
             im = self.data["local_thickness"][i]
             dat = ps.metrics.pore_size_distribution(im=im, bins=bins, log=log, voxel_size=voxel_size)
             self.data["psd"][i] = dat
@@ -227,15 +230,23 @@ class Statistics():
 
 if __name__ == "__main__":
     data = Data().data
+    prefs = Data().preferences
+    prefs["log"] = False
+    prefs["layer"] = '0-lx'
+    prefs["sizes"] = 150
+    prefs["mode"] = 'hybrid'
+    prefs["bins"] = prefs["sizes"]/2
+    print(prefs)
     im = ImageImporter(data, '/data/downsample-2048-man-thres/', importall=False, layer="0-lx").Import()
     # print(data)
     imf = Filters(data, 15, "median").ApplyFilter()
     # print(data)
-    lt = AnalyseImage(data, sizes = 25, mode = "hybrid").Analyse()
+    lt = AnalyseImage(data, sizes = 150, mode = "hybrid").Analyse()
     # print(data)
     stats = Statistics(data)
     # stats.GetPorosity()
-    stats.PoreDistribution(log=False)
-    plt.plot(data["psd"].R, data["psd"].pdf)
+    stats.PoreDistribution(bins=75, log=False)
+    # print(data["psd"])
+    plt.plot(data["psd"]["0-lx"].R, data["psd"]["0-lx"].cdf)
     plt.show()
     # print(data["psd"])
