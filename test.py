@@ -42,9 +42,37 @@ im2 = np.array([[0, 1, 0, 0, 1],
                 [0, 1, 1, 0, 1],
                 [1, 0, 0, 0, 1],
                 [0, 0, 1, 1, 1]])
-print(im2)
+# print(im2)
 
-dt = ndimage.distance_transform_edt(im2)
+zarr = np.zeros(im2.shape)
+
+print(np.where(im2==1))
+
+print(np.random.randint(0, 2, size=(10,10)))
+
+im = np.array([[1,0,1,0,0,0,0,1,0,0],
+               [0,1,0,1,1,0,1,1,1,0],
+               [0,0,0,1,1,0,1,0,1,1],
+               [0,1,0,0,0,0,1,1,0,0],
+               [1,1,0,0,0,0,1,0,1,0],
+               [0,0,0,1,1,1,0,0,0,0],
+               [1,1,0,1,1,1,0,1,0,1],
+               [1,0,0,0,1,1,1,0,1,0],
+               [1,1,1,0,1,1,1,0,1,1],
+               [1,1,1,1,1,0,1,1,1,0]])
+
+plt.imshow(im, cmap='binary')
+plt.show()
+
+edt = ndimage.distance_transform_edt(im)
+print(edt)
+fig, ax = plt.subplots()
+asdf = ax.imshow(edt, cmap='gray')
+# asdf.set_clim(0, 2.23606798)
+fig.colorbar(asdf, ax = ax)
+plt.show()
+
+# dt = ndimage.distance_transform_edt(im2)
 # print(dt)
 # print(np.amax(dt))
 # print(np.logspace(start=np.log10(np.amax(dt)), stop=0, num=3))
@@ -57,37 +85,46 @@ dt = ndimage.distance_transform_edt(im2)
 # plt.tight_layout(True)
 # plt.show()
 
-# from PIL import Image
-# import os
+from PIL import Image
+import os
 
-# im = np.array(Image.open('0-lx.tif'))
-# dt2 = ndimage.distance_transform_edt(im)
+im = np.array(Image.open('0-lx.tif'))
+dt2 = ndimage.distance_transform_edt(im)
+
+plt.imshow(im, cmap='binary')
+plt.show()
+
+fig, ax = plt.subplots()
+asdf = ax.imshow(dt2, cmap='gray')
+# asdf.set_clim(0, 2.23606798)
+fig.colorbar(asdf, ax = ax)
+plt.show()
 
 # fig, ax = plt.subplots(nrows=1, ncols=2, figsize=[5,5])
 # for i,j in zip(ax.flat, [im, dt2]):
-#     im3 = i.imshow(j)
-# # fig.colorbar(im3, ax=ax.flat)
+    # im3 = i.imshow(j)
+# fig.colorbar(im3, ax=ax.flat)
 
 # plt.tight_layout(True)
 # plt.show()
 
-r = 1.18920712
+# r = 1.18920712
 
-imresults = sp.zeros(sp.shape(im2))
-imtemp = dt >= r
+# imresults = sp.zeros(sp.shape(im2))
+# imtemp = dt >= r
 
-print(imtemp)
+# print(imtemp)
 
-imtemp = ndimage.distance_transform_edt(~imtemp) < r
-imresults[(imresults==0)*imtemp] = r
+# imtemp = ndimage.distance_transform_edt(~imtemp) < r
+# imresults[(imresults==0)*imtemp] = r
 
-print(imtemp)
+# print(imtemp)
 
-print("imresult \n")
-print(imresults)
-print((imresults==0))
-print(imresults[(imresults==0)])
-print(imresults[(imresults==0)*imtemp])
+# print("imresult \n")
+# print(imresults)
+# print((imresults==0))
+# print(imresults[(imresults==0)])
+# print(imresults[(imresults==0)*imtemp])
 
 # im = np.array([[0, 0, 0, 0, 0],
 #                [0, 1, 1, 1, 0],

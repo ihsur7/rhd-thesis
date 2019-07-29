@@ -1,0 +1,6 @@
+Degradation algorithm
+1. calculate distance transform of a nd-array
+2. find out where all the 1's (or more) are
+3. turn the True's to False in a bool array
+
+Find out how to convert 1's to a cube in a numpy array

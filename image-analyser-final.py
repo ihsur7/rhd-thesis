@@ -65,10 +65,9 @@ class Filters():
             raise Exception("Unknown filter " + self.ftype)
 
 class AnalyseImage():
-    def __init__(self, data, sizes, mode):
+    def __init__(self, data, sizes):
         self.data = data
         self.sizes = sizes
-        self.mode = mode
     
     def GetEdges(self, shape, thickness=1, return_indices=False):
         t = thickness
@@ -97,24 +96,11 @@ class AnalyseImage():
 
         inlets = sp.where(inlets)
         imresults = sp.zeros(sp.shape(im))
-        if self.mode == "dt":
-            inlets = sp.where(inlets)
-            imresults = sp.zeros(sp.shape(im))
-            for r in self.sizes:
-                imtemp = dt >= r
-                if sp.any(imtemp):
-                    imtemp = sp.ndimage.distance_transform_edt(~imtemp) < r
-                    imresults[(imresults == 0)*imtemp] = r
-        elif self.mode == "hybrid":
-            inlets = sp.where(inlets)
-            imresults = sp.zeros(sp.shape(im))
-            for r in self.sizes:
-                imtemp = dt >= r
-                if sp.any(imtemp):
-                    imtemp = fftconvolve(imtemp, strel(r), mode = 'same') > 0.0001
-                    imresults[(imresults == 0)*imtemp] = r
-        else:
-            raise Exception('Unknown Mode + ' + self.mode)
+        for r in self.sizes:
+            imtemp = dt >= r
+            if sp.any(imtemp):
+                imtemp = sp.ndimage.distance_transform_edt(~imtemp) < r
+                imresults[(imresults == 0)*imtemp] = r
 
         return imresults
 
@@ -198,14 +184,13 @@ if __name__ == "__main__":
     prefs["log"] = False
     prefs["layer"] = '0-lx'
     prefs["sizes"] = 150
-    prefs["mode"] = 'hybrid'
     prefs["bins"] = int(prefs["sizes"]/2)
     print(prefs)
     im = ImageImporter(data, prefs["input"], importall=False, layer=prefs["layer"]).Import()
     # print(data)
     imf = Filters(data, 15, "median").ApplyFilter()
     # print(data)
-    lt = AnalyseImage(data, sizes = prefs["sizes"], mode = prefs["mode"]).Analyse()
+    lt = AnalyseImage(data, sizes = prefs["sizes"]).Analyse()
     # print(data)
     stats = Statistics(data)
     # stats.GetPorosity()
