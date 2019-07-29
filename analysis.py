@@ -33,7 +33,7 @@ def apply_filter(data):
     data['lt'] = {}
     for item, value in data['input'].items():
         print('\nprocessing...'+item)
-        data['lt'][str(item)] = ps.filters.local_thickness(value, sizes=200, mode='dt')
+        data['lt'][str(item)] = ps.filters.local_thickness(value, sizes=100, mode='dt')
         print('done')
 
     return data
@@ -42,7 +42,7 @@ def analyse(data):
     data['psd'] = {}
     vox = 2048.0*774.0/5278.0 #5278.0*774.0/5278.0
     for item, value in data['lt'].items():
-        data['psd'][str(item)] = ps.metrics.pore_size_distribution(value, log=False, voxel_size=1.0/vox)
+        data['psd'][str(item)] = ps.metrics.pore_size_distribution(value, bins=50, log=False, voxel_size=1.0/vox)
 
     return data
 
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     folder = '/data/downsample-2048-man-thres/'
     #'H:/_HDR/sample-images/images/original/cropped/smoothed/enhanced-constrast/man-thres/sqcrop/'
     #'/data/downsample-2048-man-thres/'
-    outfolder = '/data/output/hires/200'
+    outfolder = '/data/output/hires/200new'
     workdir = dct.Directory(folder,outfolder)
     data = {}
     input_files = load_data(workdir.InputDIR(), data)#, resize=[500, 500])

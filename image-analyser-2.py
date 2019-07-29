@@ -231,21 +231,22 @@ class Statistics():
 if __name__ == "__main__":
     data = Data().data
     prefs = Data().preferences
+    prefs["input"] = '/data/downsample-2048-man-thres/'
     prefs["log"] = False
     prefs["layer"] = '0-lx'
     prefs["sizes"] = 150
     prefs["mode"] = 'hybrid'
-    prefs["bins"] = prefs["sizes"]/2
+    prefs["bins"] = int(prefs["sizes"]/2)
     print(prefs)
-    im = ImageImporter(data, '/data/downsample-2048-man-thres/', importall=False, layer="0-lx").Import()
+    im = ImageImporter(data, prefs["input"], importall=False, layer=prefs["layer"]).Import()
     # print(data)
     imf = Filters(data, 15, "median").ApplyFilter()
     # print(data)
-    lt = AnalyseImage(data, sizes = 150, mode = "hybrid").Analyse()
+    lt = AnalyseImage(data, sizes = prefs["sizes"], mode = prefs["mode"]).Analyse()
     # print(data)
     stats = Statistics(data)
     # stats.GetPorosity()
-    stats.PoreDistribution(bins=75, log=False)
+    stats.PoreDistribution(bins=prefs["bins"], log=prefs["log"])
     # print(data["psd"])
     plt.plot(data["psd"]["0-lx"].R, data["psd"]["0-lx"].cdf)
     plt.show()
