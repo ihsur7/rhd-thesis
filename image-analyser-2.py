@@ -196,7 +196,7 @@ if __name__ == "__main__":
     prefs = Data().preferences
     prefs["input"] = '/data/downsample-2048-man-thres/'
     prefs["log"] = False
-    prefs["layer"] = '0-lx'
+    prefs["layer"] = '20-lx'
     prefs["sizes"] = 150
     prefs["mode"] = 'hybrid'
     prefs["bins"] = int(prefs["sizes"]/2)
@@ -211,6 +211,10 @@ if __name__ == "__main__":
     # stats.GetPorosity()
     stats.PoreDistribution(bins=prefs["bins"], log=prefs["log"])
     # print(data["psd"])
-    plt.plot(data["psd"]["0-lx"].R, data["psd"]["0-lx"].cdf)
+    plt.plot(data["psd"][prefs["layer"]].R, data["psd"][prefs["layer"]].pdf)
+    # plt.bar(data["psd"][prefs["layer"]].R, data["psd"][prefs["layer"]].pdf, width=data["psd"][prefs["layer"]].bin_widths, edgecolor='k')
+    plt.xlabel('invasion size (mm)')
+    plt.ylabel('probability (%)')
+    plt.title(prefs["layer"])
     plt.show()
     # print(data["psd"])
