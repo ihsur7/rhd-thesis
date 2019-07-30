@@ -87,6 +87,7 @@ class AnalyseImage():
 
     def LocalThickness(self, im):
         dt = sp.ndimage.distance_transform_edt(im)
+        # dt *= 1/3.33 #um/px
         inlets = self.GetEdges(im.shape)
         if isinstance(self.sizes, int):
             self.sizes = sp.logspace(start=sp.log10(sp.amax(dt)), stop=0, num=self.sizes)
@@ -181,8 +182,9 @@ class Statistics():
         self.data["psd"] = {}
         for i in self.data["local_thickness"]:
             # voxel_size = self.data["raw_data"][i].shape
-            scaling = 774/5278
-            voxel_size=1/ (self.data["raw_data"][i].shape[0] * scaling)
+            # scaling = 774/5278 #px/mm /px
+            # voxel_size=1/ (self.data["raw_data"][i].shape[0] * scaling)
+            voxel_size= 1/3.33 #um/px
             im = self.data["local_thickness"][i]
             dat = ps.metrics.pore_size_distribution(im=im, bins=bins, log=log, voxel_size=voxel_size)
             self.data["psd"][i] = dat
@@ -196,10 +198,10 @@ if __name__ == "__main__":
     prefs = Data().preferences
     prefs["input"] = '/data/downsample-2048-man-thres/'
     prefs["log"] = False
-    prefs["layer"] = '20-lx'
-    prefs["sizes"] = 150
+    prefs["layer"] = '0-lx'
+    prefs["sizes"] = 100
     prefs["mode"] = 'hybrid'
-    prefs["bins"] = int(prefs["sizes"]/2)
+    prefs["bins"] = int(prefs["sizes"]/4)
     print(prefs)
     im = ImageImporter(data, prefs["input"], importall=False, layer=prefs["layer"]).Import()
     # print(data)
@@ -207,14 +209,15 @@ if __name__ == "__main__":
     # print(data)
     lt = AnalyseImage(data, sizes = prefs["sizes"], mode = prefs["mode"]).Analyse()
     # print(data)
-    stats = Statistics(data)
+    # stats = Statistics(data)
     # stats.GetPorosity()
-    stats.PoreDistribution(bins=prefs["bins"], log=prefs["log"])
+    # stats.PoreDistribution(bins=prefs["bins"], log=prefs["log"])
     # print(data["psd"])
-    plt.plot(data["psd"][prefs["layer"]].R, data["psd"][prefs["layer"]].pdf)
+    # plt.plot(data["psd"][prefs["layer"]].R, data["psd"][prefs["layer"]].cdf)
     # plt.bar(data["psd"][prefs["layer"]].R, data["psd"][prefs["layer"]].pdf, width=data["psd"][prefs["layer"]].bin_widths, edgecolor='k')
-    plt.xlabel('invasion size (mm)')
-    plt.ylabel('probability (%)')
-    plt.title(prefs["layer"])
+    # plt.xlabel('invasion size (um)')
+    # plt.ylabel('probability (%)')
+    # plt.title(prefs["layer"])
+    plt.imshow(data["local_thickness"][prefs["layer"]])
     plt.show()
     # print(data["psd"])
