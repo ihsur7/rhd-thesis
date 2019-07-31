@@ -22,8 +22,13 @@ class DistanceRidge:
         self.data = data
 
     def get_dims(self):
-        w, h = self.data.shape
-        return w, h
+        if self.data.ndim == 2:
+            w, h = self.data.shape
+            d = 1
+            return w, h, d
+        elif self.data.ndim == 3:
+            w, h, d = self.data.shape
+            return w, h, d
 
     def get_circle(self, radius):
         disk = np.ogrid(radius)
@@ -37,18 +42,66 @@ class DistanceRidge:
         #             then delete the neighbor point.
         # Get Dimensions
         dims = self.get_dims()
-        val_list = np.nonzero(self.data)
+        w = dims[0]
+        h = dims[1]
+        d = dims[2]
+        
+        # Create reference to input data
+        s = np.empty(w, h, d, dtype=float)
+        sNew = np.empty(w, h, d, dtype=float)
+        for k in range(d):
+            s[k] = self.data.flatten()
+            sNew[k] = float(self.data.flatten())
         # get largest distance in the data
-        dmax = np.amax(self.data)
+        dmax = 0
+        for j in range(h):
+            for i in range(w):
+                ind = i + w * j
+                if s[ind] > dmax:
+                    dmax = s[ind]
+        print(dmax)
         rSqMax = int((dmax ** 2) + 1)
         occurs = [False] * rSqMax
+        for j in range(h):
+            for i in range(w):
+                ind = i + w * j
+                occurs[int(s[ind] * s[ind])] = True
+        num_radii = 0
+        for i in range(rSqMax):
+            if occurs[i]:
+                num_radii += 1
+        # Make an index of the distance-squared values
+        distSqIndex = [int(i) for i in range(rSqMax)]
+        distSqValues = [int(i) for i in range(num_radii)]
+        indDS = 0
+        for i in range(rSqMax):
+            if occurs[i]:
+                distSqIndex[i] = indDS
+                newindDS = indDS + 1
+                distSqValues[newindDS] = i
+        print(distSqIndex)
+        print(distSqValues)
+        print(num_radii)
         print(occurs)
-        for j in range(dims[1]):
-            for i in range(dims[0]):
-                ind = i + dims[0] * j
-                occurs[int(ind * ind)] = True
-
-        print(occurs)
+        # Build template
+        # The first index of the template is the number of non-zero components
+        # in the offset from the test point to the remote point. The second
+        # index is the radii index (of the test point). The value of the template
+        # is the minimum square radius of the remote point required to cover the
+        # ball of the test point.
+        rSqTemplate = createTemplate(distSqValues) # ! Need to make the createTemplate method
+        dx = None
+        dy = None
+        dz = -1
+        for j in range(h):
+            for i in range(w):
+                ind = i + w * j
+                if s[ind] > 0:
+                    notRidgePoint = False
+                    sk0Sq = int(s[ind] * s[ind])
+                    sk0SqInd = distSqIndex[sk0Sq]
+                    while dz <= 1:
+                        dz += 1
 
 
 if __name__ == "__main__":
