@@ -49,11 +49,14 @@ class DistanceRidge:
         d = dims[2]
         if d == 1:
             stack = self.data[..., np.newaxis]
-            newStack = np.zeros(shape=(w,h), dtype=float)
+            # newStack = np.zeros(shape=(w,h), dtype=float)
         else:
             stack = self.data
-            newStack = np.zeros(shape=(w,h,d), dtype=float)
-        print(newStack)
+            # newStack = np.zeros(shape=(w,h,d), dtype=float)
+        # print(newStack)
+
+        stack = ImageStack(w, h, d)
+        newStack = ImageStack(w, h, d).imageStack()[0]
         # print((i for i in range(d)))
         # print(stack.shape)
         # Create 32bit floating point stack for output, s. Will also use it for g
@@ -61,6 +64,8 @@ class DistanceRidge:
         sNew = np.zeros(shape=(d, w*h), dtype=np.float32)
         # print(sNew)
         for k in range(d):
+            ipk = np.empty(shape=(1, 1))
+            newStack = stack.addSlice(ipk)
             sNew[k] = np.float32(stack[:,:,k].flatten())
         # print(sNew)
         # Create reference to input data
@@ -107,24 +112,23 @@ class DistanceRidge:
         # print(distSqValues)
         # print(num_radii)
         # print(occurs)
+
         # Build template
         # The first index of the template is the number of non-zero components
         # in the offset from the test point to the remote point. The second
         # index is the radii index (of the test point). The value of the template
         # is the minimum square radius of the remote point required to cover the
         # ball of the test point.
-        rSqTemplate = self.createTemplate(distSqValues) # ! Need to make the createTemplate method
-        # dx = None
-        # dy = None
-        # dz = -1
-        k = 0
-        while k < d:
+
+        rSqTemplate = self.createTemplate(distSqValues)
+        # k = 0
+        for k in range(d): # while k < d:
             sk = s[k]
             skNew = sNew[k]
-            j = 0
-            while j < h:
-                i = 0
-                while i < w:
+            #  j = 0
+            for j in range(h): # while j < h:
+                #  i = 0
+                for i in range(w): # while i < w:
                     ind = i + w * j
                     if sk[ind] > 0:
                         notRidgePoint = False
@@ -175,15 +179,15 @@ class DistanceRidge:
                                 break
                         if not notRidgePoint:
                             skNew[ind] = sk[ind]
-                    i += 1
-                j += 1
-            k += 1
+                    # i += 1
+                # j += 1
+            # k += 1
         print(rSqTemplate)
+        print(distSqValues)
         setMin = 0
         setMax = distMax
-        print(setMax)
+        # print(setMax)
         return rSqTemplate
-        
     
     # For each offset from the origin, (dx, dy, dz), and each radius-squared,
     # rSq, find the smallest radius-squared, r1Squared, such that a ball
@@ -199,7 +203,23 @@ class DistanceRidge:
         t[1] = self.scanCube(1, 1, 0, distSqValues)
         t[2] = self.scanCube(1, 1, 1, distSqValues)
         return t
+
+    # def ImageStack(self, width, height, size=None):
+    #     stack = np.empty(shape=(1, size))
+    #     nSlices = size
+    #     return width, height, size, nSlices, stack
     
+    # def addSlice(self, pixels):
+    #     stack = self.get_dims()[2]
+    #     nSlices += 1
+    #     if nSlices >= size:
+    #         tmp1 = np.array(shape=(1, size*2))
+
+        
+
+    # For a list of r^2 values, find the smallest r1^2 values such
+    # that a "ball" of radius r1 centered at (dx, dy, dz) includes a "ball"
+    # of radius r centered at the origin. "Ball" refers to a 3D integer grid.
     def scanCube(self, dx, dy, dz, distSqValues):
         numRadii = len(distSqValues)
         r1Sq = [0] * numRadii
@@ -235,15 +255,41 @@ class DistanceRidge:
                 r1Sq[rSqInd] = mmax
                 rSqInd += 1
         # print(r1Sq)
+        # print(rSq)
         return r1Sq
+
+class ImageStack():
+    def __init__(self, width, height, size):
+        self.width = width
+        self.height = height
+        self.size = size
+    
+    def imageStack(self):
+        stack = np.empty(shape=(1, self.size))
+        nSlices = self.size
+        return stack, nSlices
+    
+    def addSlice(self, pixels):
+        nSlices = self.imageStack()[1] + 1
+        if nSlices >= self.size:
+            tmp1 = np.empty(shape=(1, self.size*2))
+            tmp1[0:self.size] = self.imageStack()[0:self.size]
+            stack = tmp1
+            print(stack)
+        stack[nSlices-1] = pixels
+        return stack
 
 
 
 if __name__ == "__main__":
-    im = np.array([[0, 1, 0, 0, 1],
-                   [1, 0, 1, 1, 0],
-                   [0, 1, 1, 0, 1],
-                   [1, 0, 0, 0, 1],
-                   [0, 0, 1, 1, 1]])
+    im = np.array([[0, 0, 1, 1],
+                   [0, 0, 1, 1],
+                   [0, 0, 1, 0],
+                   [0, 0, 0, 0]])
+    # im = np.array([[0, 1, 0, 0, 1],
+    #                [1, 0, 1, 1, 0],
+    #                [0, 1, 1, 0, 1],
+    #                [1, 0, 0, 0, 1],
+    #                [0, 0, 1, 1, 1]])
     dtrans = DistanceTransform(im).transform()
     rid = DistanceRidge(dtrans).ridge()
