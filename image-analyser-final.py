@@ -86,7 +86,12 @@ class AnalyseImage():
 
     def LocalThickness(self, im):
         dt = sp.ndimage.distance_transform_edt(im)
+        scaling = 2048/5278 #2048/5278
+        pixel_scale = 1/ 774 # mm/px
+        voxel_size = pixel_scale * scaling
+        dt *= voxel_size
         inlets = self.GetEdges(im.shape)
+        print(inlets)
         if isinstance(self.sizes, int):
             self.sizes = sp.logspace(start=sp.log10(sp.amax(dt)), stop=0, num=self.sizes)
         else:
@@ -167,8 +172,11 @@ class Statistics():
         self.data["psd"] = {}
         for i in self.data["local_thickness"]:
             # voxel_size = self.data["raw_data"][i].shape
-            scaling = 774/5278
-            voxel_size=1/ (self.data["raw_data"][i].shape[0] * scaling)
+            # scaling = 774/5278
+            # voxel_size=1/ (self.data["raw_data"][i].shape[0] * scaling)
+            scaling = self.data["raw_data"][i].shape[0]/5278 #2048/5278
+            pixel_scale = 1/ 774 # mm/px
+            voxel_size = pixel_scale * scaling
             im = self.data["local_thickness"][i]
             dat = ps.metrics.pore_size_distribution(im=im, bins=bins, log=log, voxel_size=voxel_size)
             self.data["psd"][i] = dat
@@ -183,7 +191,7 @@ if __name__ == "__main__":
     prefs["input"] = '/data/downsample-2048-man-thres/'
     prefs["log"] = False
     prefs["layer"] = '0-lx'
-    prefs["sizes"] = 150
+    prefs["sizes"] = 50
     prefs["bins"] = int(prefs["sizes"]/2)
     print(prefs)
     im = ImageImporter(data, prefs["input"], importall=False, layer=prefs["layer"]).Import()

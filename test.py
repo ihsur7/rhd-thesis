@@ -37,40 +37,40 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 # plt.tight_layout(True)
 # plt.show()
 
-im2 = np.array([[0, 1, 0, 0, 1],
-                [1, 0, 1, 1, 0],
-                [0, 1, 1, 0, 1],
-                [1, 0, 0, 0, 1],
-                [0, 0, 1, 1, 1]])
+# im2 = np.array([[0, 1, 0, 0, 1],
+#                 [1, 0, 1, 1, 0],
+#                 [0, 1, 1, 0, 1],
+#                 [1, 0, 0, 0, 1],
+#                 [0, 0, 1, 1, 1]])
 # print(im2)
 
-zarr = np.zeros(im2.shape)
+# zarr = np.zeros(im2.shape)
 
-print(np.where(im2==1))
+# print(np.where(im2==1))
 
-print(np.random.randint(0, 2, size=(10,10)))
+# print(np.random.randint(0, 2, size=(10,10)))
 
-im = np.array([[1,0,1,0,0,0,0,1,0,0],
-               [0,1,0,1,1,0,1,1,1,0],
-               [0,0,0,1,1,0,1,0,1,1],
-               [0,1,0,0,0,0,1,1,0,0],
-               [1,1,0,0,0,0,1,0,1,0],
-               [0,0,0,1,1,1,0,0,0,0],
-               [1,1,0,1,1,1,0,1,0,1],
-               [1,0,0,0,1,1,1,0,1,0],
-               [1,1,1,0,1,1,1,0,1,1],
-               [1,1,1,1,1,0,1,1,1,0]])
+# im = np.array([[1,0,1,0,0,0,0,1,0,0],
+#                [0,1,0,1,1,0,1,1,1,0],
+#                [0,0,0,1,1,0,1,0,1,1],
+#                [0,1,0,0,0,0,1,1,0,0],
+#                [1,1,0,0,0,0,1,0,1,0],
+#                [0,0,0,1,1,1,0,0,0,0],
+#                [1,1,0,1,1,1,0,1,0,1],
+#                [1,0,0,0,1,1,1,0,1,0],
+#                [1,1,1,0,1,1,1,0,1,1],
+#                [1,1,1,1,1,0,1,1,1,0]])
 
-plt.imshow(im, cmap='binary')
-plt.show()
+# plt.imshow(im, cmap='binary')
+# plt.show()
 
-edt = ndimage.distance_transform_edt(im)
-print(edt)
-fig, ax = plt.subplots()
-asdf = ax.imshow(edt, cmap='gray')
-# asdf.set_clim(0, 2.23606798)
-fig.colorbar(asdf, ax = ax)
-plt.show()
+# edt = ndimage.distance_transform_edt(im)
+# print(edt)
+# fig, ax = plt.subplots()
+# asdf = ax.imshow(edt, cmap='gray')
+# # asdf.set_clim(0, 2.23606798)
+# fig.colorbar(asdf, ax = ax)
+# plt.show()
 
 # dt = ndimage.distance_transform_edt(im2)
 # print(dt)
@@ -85,20 +85,20 @@ plt.show()
 # plt.tight_layout(True)
 # plt.show()
 
-from PIL import Image
-import os
+# from PIL import Image
+# import os
 
-im = np.array(Image.open('0-lx.tif'))
-dt2 = ndimage.distance_transform_edt(im)
+# im = np.array(Image.open('0-lx.tif'))
+# dt2 = ndimage.distance_transform_edt(im)
 
-plt.imshow(im, cmap='binary')
-plt.show()
+# plt.imshow(im, cmap='binary')
+# plt.show()
 
-fig, ax = plt.subplots()
-asdf = ax.imshow(dt2, cmap='gray')
-# asdf.set_clim(0, 2.23606798)
-fig.colorbar(asdf, ax = ax)
-plt.show()
+# fig, ax = plt.subplots()
+# asdf = ax.imshow(dt2, cmap='gray')
+# # asdf.set_clim(0, 2.23606798)
+# fig.colorbar(asdf, ax = ax)
+# plt.show()
 
 # fig, ax = plt.subplots(nrows=1, ncols=2, figsize=[5,5])
 # for i,j in zip(ax.flat, [im, dt2]):
@@ -136,6 +136,44 @@ plt.show()
 # print(dt)
 # centre = np.where(np.amax(dt))
 # print(centre)
+# print(sp.log10(2))
+# a = sp.logspace(start=sp.log10(2), stop=0, num=5)
+# print(a)
+
+a = np.array([[False, False, False, True],
+              [False, False, False, False],
+              [False, False, False, False],
+              [False, False, False, False]])
+# print(~a)
+b = sp.ndimage.distance_transform_edt(~a) < 2
+print(b)
+imresults = np.zeros(a.shape)
+for index, i in np.ndenumerate(b):
+    if i == True:
+        imresults[index] = 2 
+print(imresults)
+# for index, i in enumerate(b.flatten()):
+#     print('i',i)
+#     if i == True:
+#         print(i)
+#         imresults.flatten()[index] = 2
+#         np.reshape(imresults, newshape=a.shape)
+a = np.array([[False, False, True, True],
+              [False, False, True, True],
+              [False, False, True, False],
+              [False, False, False, False]])
+
+
+b = sp.ndimage.distance_transform_edt(~a) < 1
+print(b)
+for index, i in np.ndenumerate(b):
+    if i == True:
+        imresults[index] = 1
+
+print(imresults)
+# imresults = np.zeros(a.shape)
+# imresults[(imresults==0)*b] = 2
+# print(imresults)
 '''
 def main(stack):
     colors = vtk.vtkNamedColors()

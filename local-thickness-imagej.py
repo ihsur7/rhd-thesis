@@ -49,14 +49,14 @@ class DistanceRidge:
         d = dims[2]
         if d == 1:
             stack = self.data[..., np.newaxis]
-            # newStack = np.zeros(shape=(w,h), dtype=float)
+            newStack = np.zeros(shape=(w,h), dtype=float)
         else:
             stack = self.data
-            # newStack = np.zeros(shape=(w,h,d), dtype=float)
+            newStack = np.zeros(shape=(w,h,d), dtype=float)
         # print(newStack)
 
-        stack = ImageStack(w, h, d)
-        newStack = ImageStack(w, h, d).imageStack()[0]
+        # stack = ImageStack(w, h, d)
+        # newStack = ImageStack(w, h, d).imageStack()[0]
         # print((i for i in range(d)))
         # print(stack.shape)
         # Create 32bit floating point stack for output, s. Will also use it for g
@@ -64,8 +64,8 @@ class DistanceRidge:
         sNew = np.zeros(shape=(d, w*h), dtype=np.float32)
         # print(sNew)
         for k in range(d):
-            ipk = np.empty(shape=(1, 1))
-            newStack = stack.addSlice(ipk)
+            # ipk = np.empty(shape=(1, 1))
+            # newStack = stack.addSlice(ipk)
             sNew[k] = np.float32(stack[:,:,k].flatten())
         # print(sNew)
         # Create reference to input data
@@ -95,10 +95,13 @@ class DistanceRidge:
                     ind = i + w * j
                     # print(int(sk[ind] * sk[ind] + 0.5))
                     occurs[int(sk[ind] * sk[ind] + 0.5)] = True
+        print(s)
+        print(occurs)
         num_radii = 0
         for i in range(rSqMax):
             if occurs[i]:
                 num_radii += 1
+        print(num_radii)
         # Make an index of the distance-squared values
         distSqIndex = [int(i) for i in range(rSqMax)]
         distSqValues = [int(i) for i in range(num_radii)]
@@ -108,8 +111,8 @@ class DistanceRidge:
                 distSqIndex[i] = indDS
                 newindDS = indDS + 1
                 distSqValues[newindDS] = i
-        # print(distSqIndex)
-        # print(distSqValues)
+        print(distSqIndex)
+        print(distSqValues)
         # print(num_radii)
         # print(occurs)
 
@@ -191,7 +194,7 @@ class DistanceRidge:
     
     # For each offset from the origin, (dx, dy, dz), and each radius-squared,
     # rSq, find the smallest radius-squared, r1Squared, such that a ball
-    # of radius r1 centered at (dx, dy, dz) include a ball of radius
+    # of radius r1 centered at (dx, dy, dz) includes a ball of radius
     # rSq centered at the origin. These balls refer to a 3D integer grid.
     # The set of (dx, dy, dz) points considered is a cube center at the origin.
     # The size of the computed array could be considerably reduced by summetry,
@@ -202,6 +205,7 @@ class DistanceRidge:
         t[0] = self.scanCube(1, 0, 0, distSqValues)
         t[1] = self.scanCube(1, 1, 0, distSqValues)
         t[2] = self.scanCube(1, 1, 1, distSqValues)
+        print(t)
         return t
 
     # def ImageStack(self, width, height, size=None):
@@ -276,7 +280,8 @@ class ImageStack():
             tmp1[0:self.size] = self.imageStack()[0:self.size]
             stack = tmp1
             print(stack)
-        stack[nSlices-1] = pixels
+        print(nSlices)
+        stack[:, nSlices-1] = pixels
         return stack
 
 
