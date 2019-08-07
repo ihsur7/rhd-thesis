@@ -194,30 +194,38 @@ class Statistics():
 
 
 if __name__ == "__main__":
-    data = Data().data
-    prefs = Data().preferences
-    prefs["input"] = '/data/downsample-2048-man-thres/'
-    prefs["log"] = False
-    prefs["layer"] = '0-lx'
-    prefs["sizes"] = 100
-    prefs["mode"] = 'hybrid'
-    prefs["bins"] = int(prefs["sizes"]/4)
-    print(prefs)
-    im = ImageImporter(data, prefs["input"], importall=False, layer=prefs["layer"]).Import()
-    # print(data)
-    imf = Filters(data, 15, "median").ApplyFilter()
-    # print(data)
-    lt = AnalyseImage(data, sizes = prefs["sizes"], mode = prefs["mode"]).Analyse()
-    # print(data)
-    stats = Statistics(data)
-    # stats.GetPorosity()
-    stats.PoreDistribution(bins=prefs["bins"], log=prefs["log"])
-    # print(data["psd"])
-    # plt.plot(data["psd"][prefs["layer"]].R, data["psd"][prefs["layer"]].cdf)
-    plt.bar(data["psd"][prefs["layer"]].R, data["psd"][prefs["layer"]].pdf, width=data["psd"][prefs["layer"]].bin_widths, edgecolor='k')
-    plt.xlabel('invasion size (um)')
-    plt.ylabel('probability (%)')
-    plt.title(prefs["layer"])
-    # plt.imshow(data["local_thickness"][prefs["layer"]])
-    plt.show()
-    # print(data["psd"])
+    layer_list = ['0-lx', '0-nx', '0-ly', '0-ny', '0-lz', '0-nz', '4-lx', '4-nx', '4-ly', '4-ny', '4-lz', '4-nz', '8-lx', '8-nx', '8-ly', '8-ny', '8-lz', '8-nz',\
+                  '12-lx', '12-nx', '12-ly', '12-ny', '12-lz', '12-nz', '16-lx', '16-nx', '16-ly', '16-ny', '16-lz', '16-nz', \
+                  '20-lx', '20-nx', '20-ly', '20-ny', '20-lz', '20-nz']
+    for i in layer_list:
+        data = Data().data
+        prefs = Data().preferences
+        prefs["input"] = '/data/downsample-2048-man-thres/'
+        prefs["log"] = False
+        prefs["layer"] = i
+        prefs["sizes"] = 100
+        prefs["mode"] = 'hybrid'
+        prefs["bins"] = int(prefs["sizes"]/4)
+        outfolder = '/data/downsample-2048-man-thres/New folder/'
+        workdir = pyd.Directory(prefs["input"],outfolder)
+        print(prefs)
+        im = ImageImporter(data, prefs["input"], importall=False, layer=prefs["layer"]).Import()
+        # print(data)
+        imf = Filters(data, 15, "median").ApplyFilter()
+        # print(data)
+        lt = AnalyseImage(data, sizes = prefs["sizes"], mode = prefs["mode"]).Analyse()
+        # print(data)
+        stats = Statistics(data)
+        # stats.GetPorosity()
+        stats.PoreDistribution(bins=prefs["bins"], log=prefs["log"])
+        # print(data["psd"])
+        # plt.plot(data["psd"][prefs["layer"]].R, data["psd"][prefs["layer"]].cdf)
+        plt.bar(data["psd"][prefs["layer"]].R, data["psd"][prefs["layer"]].pdf, width=data["psd"][prefs["layer"]].bin_widths, edgecolor='k')
+        plt.xlabel('invasion size (um)')
+        plt.ylabel('probability (%)')
+        plt.title(prefs["layer"])
+        impath = '/data/downsample-2048-man-thres/pdf/'+i+'.png'
+        plt.savefig(impath, dpi=300)
+        # plt.imshow(data["local_thickness"][prefs["layer"]])
+        # plt.show()
+# print(data["psd"])

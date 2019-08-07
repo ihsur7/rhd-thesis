@@ -140,35 +140,38 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 # a = sp.logspace(start=sp.log10(2), stop=0, num=5)
 # print(a)
 
-a = np.array([[False, False, False, True],
-              [False, False, False, False],
-              [False, False, False, False],
-              [False, False, False, False]])
-# print(~a)
-b = sp.ndimage.distance_transform_edt(~a) < 2
-print(b)
-imresults = np.zeros(a.shape)
-for index, i in np.ndenumerate(b):
-    if i == True:
-        imresults[index] = 2 
-print(imresults)
-# for index, i in enumerate(b.flatten()):
-#     print('i',i)
+# a = np.array([[False, False, False, True],
+#               [False, False, False, False],
+#               [False, False, False, False],
+#               [False, False, False, False]])
+# # print(~a)
+# b = sp.ndimage.distance_transform_edt(~a) < 2
+# print(b)
+# imresults = np.zeros(a.shape)
+# for index, i in np.ndenumerate(b):
 #     if i == True:
-#         print(i)
-#         imresults.flatten()[index] = 2
-#         np.reshape(imresults, newshape=a.shape)
-a = np.array([[False, False, True, True],
-              [False, False, True, True],
-              [False, False, True, False],
-              [False, False, False, False]])
+#         imresults[index] = 2 
+# print(imresults)
+# # for index, i in enumerate(b.flatten()):
+# #     print('i',i)
+# #     if i == True:
+# #         print(i)
+# #         imresults.flatten()[index] = 2
+# #         np.reshape(imresults, newshape=a.shape)
+# a = np.array([[False, False, True, True],
+#               [False, False, True, True],
+#               [False, False, True, False],
+#               [False, False, False, False]])
 
 
-b = sp.ndimage.distance_transform_edt(~a) < 1
-print(b)
-for index, i in np.ndenumerate(b):
-    if i == True:
-        imresults[index] = 1
+# b = sp.ndimage.distance_transform_edt(~a) < 1
+# print(b)
+# for index, i in np.ndenumerate(b):
+#     if i == True:
+#         imresults[index] = 1
+
+t = 'asdf' + str(1) + 'asdf'
+print(t)
 
 print(imresults)
 # imresults = np.zeros(a.shape)

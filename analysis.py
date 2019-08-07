@@ -18,7 +18,7 @@ def load_data(folder, data, resize = None):
     for item in os.listdir(folder):
         # print(item)
         if not resize:
-            im = np.array(Image.open(folder+item).convert('L'))
+            im = np.array(PIL.ImageOps.invert(Image.open(folder+item).convert('L')))
             # print(data)
             data['input'][str(item)] = im
         else:
@@ -40,15 +40,18 @@ def apply_filter(data):
 
 def analyse(data):
     data['psd'] = {}
-    vox = 2048.0*774.0/5278.0 #5278.0*774.0/5278.0
+    vox = 1/300.33 #mm/px #(2048.0*774.0)/5278.0 #5278.0*774.0/5278.0
     for item, value in data['lt'].items():
-        data['psd'][str(item)] = ps.metrics.pore_size_distribution(value, bins=50, log=False, voxel_size=1.0/vox)
+        data['psd'][str(item)] = ps.metrics.pore_size_distribution(value, bins=50, log=False, voxel_size=vox)
 
     return data
 
 def plot(outfolder, data):
     # 0-x
     # itemlist = ['20-lx', '20-nx']
+    layer_list = ['0-lx', '0-nx', '0-ly', '0-ny', '0-lz', '0-nz', '4-lx', '4-nx', '4-ly', '4-ny', '4-lz', '4-nz', '8-lx', '8-nx', '8-ly', '8-ny', '8-lz', '8-nz',\
+                  '12-lx', '12-nx', '12-ly', '12-ny', '12-lz', '12-nz', '16-lx', '16-nx', '16-ly', '16-ny', '16-lz', '16-nz', \
+                  '20-lx', '20-nx', '20-ly', '20-ny', '20-lz', '20-nz']
     itemlist1 = [[['0-lx', '0-nx'], ['0-ly', '0-ny'], ['0-lz', '0-nz']],
                  [['4-lx', '4-nx'], ['4-ly', '4-ny'], ['4-lz', '4-nz']],
                  [['8-lx', '8-nx'], ['8-ly', '8-ny'], ['8-lz', '8-nz']],
@@ -70,27 +73,37 @@ def plot(outfolder, data):
     #         plt.legend()
     #         plt.title(j)
     #         plt.savefig(outfolder+j[0]+j[-1]+'.png', dpi=300)
-    for k in itemlist2:
-        for l in k:
-            plt.figure()
-            line1 = data['psd'][l[0]+'.tif']
-            line2 = data['psd'][l[1]+'.tif']
-            line3 = data['psd'][l[2]+'.tif']
-            line4 = data['psd'][l[3]+'.tif']
-            line5 = data['psd'][l[4]+'.tif']
-            line6 = data['psd'][l[5]+'.tif']
-            plt.plot(line1.R, line1.cdf, label='W0')
-            plt.plot(line2.R, line2.cdf, label='W4')
-            plt.plot(line3.R, line3.cdf, label='W8')
-            plt.plot(line4.R, line4.cdf, label='W12')
-            plt.plot(line5.R, line5.cdf, label='W16')
-            plt.plot(line6.R, line6.cdf, label='W20')
-            plt.xlabel('invasion size [mm]')
-            plt.ylabel('volume fraction invaded')
-            plt.legend()
-            plt.title(l)
-            plt.savefig(outfolder+l[0]+l[-1]+'.png', dpi=300)
-    
+    for k in layer_list:
+            # plt.figure()
+            # line1 = data['psd'][l[0]+'.tif']
+            # line2 = data['psd'][l[1]+'.tif']
+            # line3 = data['psd'][l[2]+'.tif']
+            # line4 = data['psd'][l[3]+'.tif']
+            # line5 = data['psd'][l[4]+'.tif']
+            # line6 = data['psd'][l[5]+'.tif']
+            # plt.plot(line1.R, line1.pdf, label='W0')
+            # plt.plot(line2.R, line2.pdf, label='W4')
+            # plt.plot(line3.R, line3.pdf, label='W8')
+            # plt.plot(line4.R, line4.pdf, label='W12')
+            # plt.plot(line5.R, line5.pdf, label='W16')
+            # plt.plot(line6.R, line6.pdf, label='W20')
+            # plt.xlabel('invasion size [mm]')
+            # plt.ylabel('pdf')
+            # plt.legend()
+            # plt.title(l)
+            # plt.savefig(outfolder+l[0]+l[-1]+'.png', dpi=300)
+        blist = [i for i in data['psd'][k+'.tif'].bin_centers]
+        pdflist = [i/100 for i in data['psd'][k+'.tif'].pdf]
+        sumlist = []
+        for i,j in zip(blist, pdflist):
+            sumlist.append(i * j)
+        t = k + ' avg: ' + str(sum(sumlist))
+        plt.figure()
+        plt.bar(x=data['psd'][k+'.tif'].bin_centers, height=data['psd'][k+'.tif'].pdf, width=data['psd'][k+'.tif'].bin_widths, edgecolor='k', linewidth=2)
+        plt.ylabel('pdf')
+        plt.xlabel('invasion size [mm]')
+        plt.title(t)
+        plt.savefig(outfolder+k+'.png', dpi=300)
     return
 
 
@@ -98,12 +111,15 @@ if __name__ == "__main__":
     folder = '/data/downsample-2048-man-thres/'
     #'H:/_HDR/sample-images/images/original/cropped/smoothed/enhanced-constrast/man-thres/sqcrop/'
     #'/data/downsample-2048-man-thres/'
-    outfolder = '/data/output/new/'
+    outfolder = '/data/output/new/pdf/scaffold/'
     workdir = dct.Directory(folder,outfolder)
     data = {}
     input_files = load_data(workdir.InputDIR(), data)#, resize=[500, 500])
     filtered = apply_filter(input_files)
     analysed = analyse(filtered)
+    # plt.figure()
+    # plt.imshow(analysed['lt']['0-lx.tif'])
+    # plt.show()
     plot(workdir.OutputDIR(), analysed)
     # print(data['lt'])
     # print(data['psd'])
