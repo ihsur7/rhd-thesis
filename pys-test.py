@@ -8,17 +8,35 @@ import porespy as ps
 imdir = '/data/downsample-2048-man-thres/'
 im = '0-lx'
 data = pys.Data().data
+data2 = pys.Data().data
 
 im1 = pys.ImageImporter(data, imdir).import_image(im)
 # plt.imshow(data['0-lx']['raw_data'], cmap='binary')
 im1 = pys.Filters(data, 15).median_filter()
 
-im1 = pys.LocalThickness(data).local_thickness(sizes=25)
+pspyimage = pys.ImageImporter(data2, imdir).import_image(im)
+pspyimage = pys.Filters(data2, 15).median_filter()
 
-im1 = pys.Measure(data).measure_all(voxel_size=1, bins=10, log=False)
-print(data)
+print(data2)
+
+sizes = np.arange(start=1, stop=200, step=0.1)
+print(len(np.ndarray.tolist(sizes)))
+print(sizes)
+im1 = pys.LocalThickness(data).local_thickness(sizes=sizes)
+
+im1 = pys.Measure(data).measure_all(voxel_size=3.32967, bins=100, log=False) #um/px
+
 
 im2 = pys.save_csv(data)
+
+pspy = ps.filters.local_thickness(data2[im]['filter'], sizes=sizes, mode='dt')
+pspy = ps.metrics.pore_size_distribution(pspy, bins=100, log=False, voxel_size=3.32967)
+plt.bar(x = pspy.R, height=pspy.pdf, width=pspy.bin_widths, edgecolor='k', linewidth=2)
+plt.show()
+plt.bar(x=data[im]['R'], height=data[im]['pdf'], width=data[im]['bin_widths'], 
+edgecolor='k', linewidth=2)
+plt.show()
+
 # plt.show()
 
 # im2 = np.array([[0, 0, 1, 1],

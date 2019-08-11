@@ -16,6 +16,7 @@ def convert_bool(im):
 def _parse_data(data):
     im = list(data)[0]
     del_list = ['raw_data', 'filter', 'lt']
+    new_data = {}
     for i in del_list:
         del data[im][i]
     psd_data = list(data[im]['psd'])
@@ -23,25 +24,25 @@ def _parse_data(data):
         data[im][i] = data[im]['psd'][i]
     for i in ['white', 'black']:
         data[im][i] = data[im]['porosity'][i]
+        # new_data[i] = data[im][i]
     del data[im]['porosity']
     data[im].pop('psd')
-    print(list(data[im]))
-    return data
+    newlist = list(data[im])[:-2]
+    for i in newlist:
+        new_data[i] = np.ndarray.tolist(data[im][i])
+    return new_data
 
 def save_csv(data):
     # bin_centers = R
     im = list(data)[0]
     data = _parse_data(data)
-    csv_cols = list(data[im])
+    csv_cols = list(data)
     filename = im+'.csv'
-    try:
-        with open(filename, 'w') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=csv_cols)
-            writer.writeheader()
-            for cols in csv_cols:
-                writer.writerows(data[im])
-    except IOError:
-        print(IOError)
+    # print(data.values())
+    with open(filename, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(data.keys())
+        writer.writerows(zip(*data.values()))
 
 class Data(object):
     def __init__(self):
@@ -114,6 +115,7 @@ class LocalThickness(object):
         for r in sizes:
             imtemp = dt >= r
             if np.any(imtemp):
+                imtemp = ndimage.distance_transform_edt(~imtemp) < r
                 imresults[(imresults == 0)*imtemp] = r
         self.data[self.im]["lt"] = imresults
         return self.data
