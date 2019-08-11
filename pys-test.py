@@ -17,6 +17,8 @@ im1 = pys.LocalThickness(data).local_thickness(sizes=25)
 
 im1 = pys.Measure(data).measure_all(voxel_size=1, bins=10, log=False)
 print(data)
+
+im2 = pys.save_csv(data)
 # plt.show()
 
 # im2 = np.array([[0, 0, 1, 1],

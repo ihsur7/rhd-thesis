@@ -14,11 +14,34 @@ def convert_bool(im):
     return np.array(im, dtype=bool)
 
 def _parse_data(data):
-    pass
+    im = list(data)[0]
+    del_list = ['raw_data', 'filter', 'lt']
+    for i in del_list:
+        del data[im][i]
+    psd_data = list(data[im]['psd'])
+    for i in psd_data:
+        data[im][i] = data[im]['psd'][i]
+    for i in ['white', 'black']:
+        data[im][i] = data[im]['porosity'][i]
+    del data[im]['porosity']
+    data[im].pop('psd')
+    print(list(data[im]))
+    return data
 
 def save_csv(data):
     # bin_centers = R
-    
+    im = list(data)[0]
+    data = _parse_data(data)
+    csv_cols = list(data[im])
+    filename = im+'.csv'
+    try:
+        with open(filename, 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=csv_cols)
+            writer.writeheader()
+            for cols in csv_cols:
+                writer.writerows(data[im])
+    except IOError:
+        print(IOError)
 
 class Data(object):
     def __init__(self):
