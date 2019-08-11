@@ -3,6 +3,7 @@ import imageprocessor as IP
 import numpy as np
 import stl as mesh
 import os
+import pystruts as pys
 # import pyassimp
 
 import voxelization as vox
@@ -23,7 +24,7 @@ working_dir = direct.Directory(indir2,outdir1)
 
 newmesh = vox.Voxelise(working_dir.InputDIR(), working_dir.OutputDIR())
 
-newmesh.Voxelisation()
+# # newmesh.Voxelisation()
 
 # filename = filename[0:filename.rfind('.')]
 # print(filename)
