@@ -1,5 +1,6 @@
 import pystruts as pys
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gs
 import numpy as np
 import skimage.morphology as morph
 import scipy.ndimage as ndimage
@@ -23,11 +24,26 @@ for i in os.listdir(work_dir):
     data = pys.Data().data
     im1 = pys.ImageImporter(data, imdir).import_image(i)
     im1 = pys.Filters(data, 15).median_filter()
-    im1 = pys.LocalThickness(data).local_thickness(sizes, invert=True)
+    im1 = pys.LocalThickness(data).local_thickness(sizes, invert=False)
+    grid = gs.GridSpec(1, 3)
     plt.figure()
+    ax = plt.subplot(grid[0, 0])
+    plt.imshow(data[i]['raw_data'])
+    plt.axis('off')
+    plt.title('raw_data')
+
+    ax = plt.subplot(grid[0, 1])
+    plt.imshow(data[i]['filter'])
+    plt.axis('off')
+    plt.title('filter')
+
+    ax = plt.subplot(grid[0, 2])
     plt.imshow(data[i]['lt'])
-    plt.title(i)
-    plt.savefig(out_dir+i+'.png')
+    plt.axis('off')
+    plt.title('lt')
+
+    plt.suptitle(i)
+    plt.savefig(out_dir+i+'.png', dpi=300)
     plt.close()
     im1 = pys.Measure(data).measure_all(voxel_size=3.32967, bins=bins, log=False)
     im2 = pys.save_csv(data, out_dir)
