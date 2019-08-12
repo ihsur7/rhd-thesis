@@ -5,35 +5,56 @@ import skimage.morphology as morph
 import scipy.ndimage as ndimage
 import porespy as ps
 import os
+import pydirectory as pyd
+import multiprocessing as multi
 
 imdir = '/data/downsample-2048-man-thres/'
+outdir = '/data/graphs/'
+direct = pyd.Directory(imdir, outdir)
+work_dir = direct.InputDIR()
+out_dir = direct.OutputDIR()
+sizes = np.logspace(start=np.log10(200), stop=0, num=100)[-1::-1]
+print(sizes) #25 #np.arange(start=1, stop=500, step=0.1)
+bins = np.linspace(start=1, stop=601, num=300)
+
+for i in os.listdir(work_dir):
+    i = i[:-4]
+    print('now processing... ' + i)
+    data = pys.Data().data
+    im1 = pys.ImageImporter(data, imdir).import_image(i)
+    im1 = pys.Filters(data, 15).median_filter()
+    im1 = pys.LocalThickness(data).local_thickness(sizes, invert=True)
+    plt.figure()
+    plt.imshow(data[i]['lt'])
+    plt.title(i)
+    plt.savefig(out_dir+i+'.png')
+    plt.close()
+    im1 = pys.Measure(data).measure_all(voxel_size=3.32967, bins=bins, log=False)
+    im2 = pys.save_csv(data, out_dir)
+    print('saved... ' + i + '.csv')
+
+# im = '0-lx'
+# data = pys.Data().data
+# data2 = pys.Data().data
+
+# im1 = pys.ImageImporter(data, imdir).import_image(im)
+# # plt.imshow(data['0-lx']['raw_data'], cmap='binary')
+# im1 = pys.Filters(data, 15).median_filter()
+
+# pspyimage = pys.ImageImporter(data2, imdir).import_image(im)
+# pspyimage = pys.Filters(data2, 15).median_filter()
+
+# print(data2)
+
+# sizes = np.arange(start=1, stop=200, step=0.01)
+# print(len(np.ndarray.tolist(sizes)))
+# print(sizes)
+# im1 = pys.LocalThickness(data).local_thickness(sizes=sizes)
+
+# im1 = pys.Measure(data).measure_all(voxel_size=3.32967, bins=200, log=False) #um/px
 
 
-for i in os.listdir(os.path.join(imdir)):
-    print(i)
-
-im = '0-lx'
-data = pys.Data().data
-data2 = pys.Data().data
-
-im1 = pys.ImageImporter(data, imdir).import_image(im)
-# plt.imshow(data['0-lx']['raw_data'], cmap='binary')
-im1 = pys.Filters(data, 15).median_filter()
-
-pspyimage = pys.ImageImporter(data2, imdir).import_image(im)
-pspyimage = pys.Filters(data2, 15).median_filter()
-
-print(data2)
-
-sizes = np.arange(start=1, stop=200, step=0.1)
-print(len(np.ndarray.tolist(sizes)))
-print(sizes)
-im1 = pys.LocalThickness(data).local_thickness(sizes=sizes)
-
-im1 = pys.Measure(data).measure_all(voxel_size=3.32967, bins=200, log=False) #um/px
-
-
-im2 = pys.save_csv(data)
+# im2 = pys.save_csv(data)
 
 # pspy = ps.filters.local_thickness(data2[im]['filter'], sizes=sizes, mode='dt')
 # pspy = ps.metrics.pore_size_distribution(pspy, bins=100, log=False, voxel_size=3.32967)

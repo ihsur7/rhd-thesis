@@ -32,12 +32,12 @@ def _parse_data(data):
         new_data[i] = np.ndarray.tolist(data[im][i])
     return new_data
 
-def save_csv(data):
+def save_csv(data, output_dir):
     # bin_centers = R
     im = list(data)[0]
     data = _parse_data(data)
     csv_cols = list(data)
-    filename = im+'.csv'
+    filename = output_dir+im+'.csv'
     # print(data.values())
     with open(filename, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
@@ -109,6 +109,7 @@ class LocalThickness(object):
                 self.data[self.im]["filter"])
         if isinstance(sizes, int):
             sizes = np.logspace(start = np.log10(np.amax(dt)), stop = 0, num = sizes)
+            print('max ' + str(np.amax(dt)))
         else:
             sizes = np.unique(sizes)[-1::-1]
         imresults = np.zeros(shape=self.data[self.im]["raw_data"].shape)
@@ -148,6 +149,14 @@ class Measure(object):
         black = 1 - white
         self.data[self.im]["porosity"] = {'white': white, 'black': black}
         return self.data
+
+    def psd_nphistogram(self, voxel_size, bin_width, log=False):
+        im = self.data[self.im]["lt"].flatten()
+        vals = im[im > 0] * voxel_size
+        if log:
+            vals = np.log10(vals)
+        #h = np.histogram(vals, bins=)
+        pass
 
     def psd(self, voxel_size, bins=10, log=False):
         im = self.data[self.im]["lt"].flatten()
