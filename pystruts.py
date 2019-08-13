@@ -32,6 +32,28 @@ def _parse_data(data):
         new_data[i] = np.ndarray.tolist(data[im][i])
     return new_data
 
+def _parse_lt(data):
+    im = list(data)[0]
+    del_list = ['raw_data', 'filter']
+    for i in del_list:
+        del data[im][i]
+    data_array = data[im]['lt'].flatten()
+    data_array = data_array[data_array != 0]
+    del data[im]
+    data[im] = np.ndarray.tolist(data_array)
+    data[im] = [i*3.32967 for i in data[im]]
+    return data
+
+def save_lt(data, output_dir):
+    im = list(data)[0]
+    data = _parse_lt(data)
+    csv_cols = list(data)
+    filename = output_dir+im+'.csv'
+    with open(filename, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(data.keys())
+        writer.writerows(zip(*data.values()))
+
 def save_csv(data, output_dir):
     # bin_centers = R
     im = list(data)[0]
