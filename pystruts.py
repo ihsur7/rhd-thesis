@@ -8,7 +8,9 @@ import skimage.morphology as morph
 import pydirectory as pyd
 import matplotlib.pyplot as plt
 import os
-import csv 
+import csv
+from collections import Counter, OrderedDict
+import math
 
 def convert_bool(im):
     return np.array(im, dtype=bool)
@@ -65,6 +67,28 @@ def save_csv(data, output_dir):
         writer = csv.writer(csvfile)
         writer.writerow(data.keys())
         writer.writerows(zip(*data.values()))
+
+def freq_count(data):
+    im = list(data)[0]
+    data = _parse_lt(data)
+    countr = Counter(data[im])
+    return OrderedDict(sorted(countr.items()))
+
+def roundup(num):
+    return int(math.ceil(num/10.0))*10
+
+def hist(data):
+    hist, bin_edges = np.histogram(data, bins=np.arange(start=0, stop=roundup(np.amax(data))+10, step=10))
+    return hist
+
+def save_freq_count(data, output_dir):
+    im = list(data)[0]
+    data = freq_count(data)
+    filename = output_dir+im+'.csv'
+    with open(filename, 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        for key,value in data.items():
+            writer.writerow([key, value])
 
 class Data(object):
     def __init__(self):

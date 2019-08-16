@@ -10,7 +10,7 @@ import pydirectory as pyd
 import multiprocessing as multi
 
 imdir = '/data/downsample-2048-man-thres/'
-outdir = '/data/graphs-lt-pores/'
+outdir = '/data/freq-lt-pores/'
 direct = pyd.Directory(imdir, outdir)
 work_dir = direct.InputDIR()
 out_dir = direct.OutputDIR()
@@ -48,7 +48,9 @@ for i in os.listdir(work_dir):
     # # im1 = pys.Measure(data).measure_all(voxel_size=3.32967, bins=bins, log=False)
     # im2 = pys.save_csv(data, out_dir)
     # print('saved... ' + i + '.csv')
-    im2 = pys.save_lt(data, out_dir)
+    # im2 = pys.save_lt(data, out_dir)
+    # im2 = pys.save_freq_count(data, out_dir)
+    print(pys.hist(pys._parse_lt(data)))
     print('saved... '+i+'.csv')
 
 # im = '0-lx'
