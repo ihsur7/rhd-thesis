@@ -78,8 +78,26 @@ def roundup(num):
     return int(math.ceil(num/10.0))*10
 
 def hist(data):
-    hist, bin_edges = np.histogram(data, bins=np.arange(start=0, stop=roundup(np.amax(data))+10, step=10))
-    return hist
+    im = list(data)[0]
+    stop = roundup(np.amax(data[im]))+5
+    bins = np.arange(-5, stop, 10)
+    # print(bins)
+    hist, bin_edges = np.histogram(data[im], bins=bins)
+    bin_centers = ((bin_edges[1:] + bin_edges[:-1])/2)
+    # print(len(hist), len(bin_edges))
+    return hist, bin_edges, bin_centers, bins
+
+def save_hist(data, output_dir):
+    im = list(data)[0]
+    h = hist(data)
+    counts = h[0]
+    bin_c = h[2]
+    bin_e = h[1]
+    bins = h[3]
+    filename = output_dir+im+'.csv'
+    with open(filename, 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerows(zip(*(bin_c, counts, bins)))
 
 def save_freq_count(data, output_dir):
     im = list(data)[0]
