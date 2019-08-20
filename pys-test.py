@@ -9,8 +9,8 @@ import os
 import pydirectory as pyd
 import multiprocessing as multi
 
-imdir = '/data/downsample-2048-man-thres/'
-outdir = '/data/freq-lt-material/'
+imdir = '/data/downsample-2048-man-thres/lz-1/'
+outdir = '/data/freq-lt-pores/lz-1/'
 direct = pyd.Directory(imdir, outdir)
 work_dir = direct.InputDIR()
 out_dir = direct.OutputDIR()
@@ -24,26 +24,26 @@ for i in os.listdir(work_dir):
     data = pys.Data().data
     im1 = pys.ImageImporter(data, imdir).import_image(i)
     im1 = pys.Filters(data, 15).median_filter()
-    im1 = pys.LocalThickness(data).local_thickness(sizes, invert=False)
-    grid = gs.GridSpec(1, 3)
-    plt.figure()
-    ax = plt.subplot(grid[0, 0])
-    plt.imshow(data[i]['raw_data'], cmap='binary')
-    plt.axis('off')
-    plt.title('raw_data')
+    im1 = pys.LocalThickness(data).local_thickness(sizes, invert=True)
+    # grid = gs.GridSpec(1, 3)
+    # plt.figure()
+    # ax = plt.subplot(grid[0, 0])
+    # plt.imshow(data[i]['raw_data'], cmap='binary')
+    # plt.axis('off')
+    # plt.title('raw_data')
 
-    ax = plt.subplot(grid[0, 1])
-    plt.imshow(data[i]['filter'], cmap='binary')
-    plt.axis('off')
-    plt.title('filter')
+    # ax = plt.subplot(grid[0, 1])
+    # plt.imshow(data[i]['filter'], cmap='binary')
+    # plt.axis('off')
+    # plt.title('filter')
 
-    ax = plt.subplot(grid[0, 2])
-    plt.imshow(data[i]['lt'])
-    plt.axis('off')
-    plt.title('lt')
+    # ax = plt.subplot(grid[0, 2])
+    # plt.imshow(data[i]['lt'])
+    # plt.axis('off')
+    # plt.title('lt')
 
-    plt.suptitle(i)
-    plt.show()
+    # plt.suptitle(i)
+    # plt.show()
     # plt.savefig(out_dir+i+'.png', dpi=300)
     # plt.close()
     # # im1 = pys.Measure(data).measure_all(voxel_size=3.32967, bins=bins, log=False)
@@ -52,8 +52,8 @@ for i in os.listdir(work_dir):
     # im2 = pys.save_lt(data, out_dir)
     # im2 = pys.save_freq_count(data, out_dir)
     # print(pys.hist(pys._parse_lt(data)))
-    # im2 = pys.save_hist(pys._parse_lt(data), out_dir)
-    # print('saved... '+i+'.csv')
+    im2 = pys.save_hist(pys._parse_lt(data), out_dir)
+    print('saved... '+i+'.csv')
 
 # im = '0-lx'
 # data = pys.Data().data
