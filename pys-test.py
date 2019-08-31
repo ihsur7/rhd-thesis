@@ -9,8 +9,8 @@ import os
 import pydirectory as pyd
 import multiprocessing as multi
 
-imdir = '/data/downsample-2048-man-thres/lx-2/'
-outdir = '/data/freq-lt-pores/lx-2/'
+imdir = '/data/downsample-2048-man-thres/ly-2/'
+outdir = '/data/freq-lt-material/ly-2/'
 direct = pyd.Directory(imdir, outdir)
 work_dir = direct.InputDIR()
 out_dir = direct.OutputDIR()
@@ -24,7 +24,7 @@ for i in os.listdir(work_dir):
     data = pys.Data().data
     im1 = pys.ImageImporter(data, imdir).import_image(i)
     im1 = pys.Filters(data, 15).median_filter()
-    im1 = pys.LocalThickness(data).local_thickness(sizes, invert=True)
+    im1 = pys.LocalThickness(data).local_thickness(sizes, invert=False)
     grid = gs.GridSpec(1, 3)
     plt.figure()
     ax = plt.subplot(grid[0, 0])
