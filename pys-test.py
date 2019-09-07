@@ -9,8 +9,8 @@ import os
 import pydirectory as pyd
 import multiprocessing as multi
 
-imdir = '/data/downsample-2048-man-thres/ly-2/'
-outdir = '/data/freq-lt-material/ly-2/'
+imdir = '/data/downsample-512/'
+outdir = '/data/final-stats/freq-lt-pore/'
 direct = pyd.Directory(imdir, outdir)
 work_dir = direct.InputDIR()
 out_dir = direct.OutputDIR()
@@ -23,8 +23,8 @@ for i in os.listdir(work_dir):
     print('now processing... ' + i)
     data = pys.Data().data
     im1 = pys.ImageImporter(data, imdir).import_image(i)
-    im1 = pys.Filters(data, 15).median_filter()
-    im1 = pys.LocalThickness(data).local_thickness(sizes, invert=False)
+    im1 = pys.Filters(data, 3).median_filter() #original 15
+    im1 = pys.LocalThickness(data).local_thickness(sizes, invert=True)
     grid = gs.GridSpec(1, 3)
     plt.figure()
     ax = plt.subplot(grid[0, 0])
@@ -49,10 +49,10 @@ for i in os.listdir(work_dir):
     # # im1 = pys.Measure(data).measure_all(voxel_size=3.32967, bins=bins, log=False)
     # im2 = pys.save_csv(data, out_dir)
     # print('saved... ' + i + '.csv')
-    # im2 = pys.save_lt(data, out_dir)
+    im2 = pys.save_lt(data, out_dir)
     # im2 = pys.save_freq_count(data, out_dir)
     # print(pys.hist(pys._parse_lt(data)))
-    im2 = pys.save_hist(pys._parse_lt(data), out_dir)
+    # im2 = pys.save_hist(pys._parse_lt(data), out_dir)
     print('saved... '+i+'.csv')
 
 # im = '0-lx'

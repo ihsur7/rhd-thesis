@@ -43,7 +43,7 @@ def _parse_lt(data):
     data_array = data_array[data_array != 0]
     del data[im]
     data[im] = np.ndarray.tolist(data_array)
-    data[im] = [i*3.32967 for i in data[im]]
+    data[im] = [i*13.30141 for i in data[im]] #original 3.32967
     return data
 
 def save_lt(data, output_dir):
