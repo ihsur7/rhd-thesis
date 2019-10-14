@@ -3,12 +3,16 @@ import PIL.ImageOps as imops
 import numpy as np
 import scipy as sp
 import scipy.ndimage as ndimage
+import skimage.data as skdata
+import skimage.io as skio
+from skimage import img_as_uint
 from pystruts import ImageImporter, Filters
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import math
 import random
 import pydirectory as pyd
-
+import matplotlib.animation
 #take edt
 #identify pixels on the edge
 #turn them off
@@ -18,124 +22,66 @@ import pydirectory as pyd
 #identify pixels on edge
 #turn them on
 
-class Data(object):
-    def __init__(self):
-        self.data = {}
+mpl.use('Agg')
+mpl.rcParams['animation.ffmpeg_path'] = 'C:/Program Files/ImageMagick-7.0.8-Q16/ffmpeg.exe'
+mpl.rcParams['animation.convert_path'] = 'C:\Program Files\ImageMagick-7.0.8-Q16/magick.exe'
+d = pyd.Directory('/data/final_images/', '/data/deg_test/')
 
-imdata = Data().data
-
-in_dir = '/data/final_images/'
-out_dir = pyd.Directory(in_dir, '/data/deg_test/').OutputDIR()
-image = ImageImporter(imdata, in_dir).import_image('0-lx')
+in_dir = d.InputDIR()
+out_dir = d.OutputDIR()
 
 def iter(n):
-    data_copy = imdata['0-lx']['raw_data']
-
-    i = 0
+    init_img = skio.imread(in_dir+'0-lx.tif', as_gray=True)
+    skio.imsave(out_dir+'iter-0.png', init_img)
+    i = 1
+    imglist = []
+    imglist.append(init_img)
     while i < n:
+        image = skio.imread(out_dir+'iter-{}.png'.format(i-1), as_gray=True)
+        if i < n/20:
+            dt = ndimage.distance_transform_edt(~image)
+        else:
+            dt = ndimage.distance_transform_edt(image)
+        imtemp = dt == 1
+        if np.any(imtemp):
+            edge = np.where(imtemp)
+            dec = decline(0.01, 0.2, i)
+            randlist_size = math.floor(random.uniform(dec[0], dec[1])*len(edge[0])) #[0.05, 0.2], [0.2, 0.5]
+            index_list = np.arange(0, len(edge[0]))
+            new_index_list = shuffled(index_list)[0:randlist_size-1]
+            col0 = [x for x in edge[0][new_index_list]]
+            col1 = [y for y in edge[1][new_index_list]]
+
+            for l, m in zip(col0, col1):
+                if i < n/20:
+                    image[l, m] = 255
+                else:
+                    image[l, m] = 0
+
+            skio.imsave(out_dir+'iter-{}.png'.format(i), image)
+            imglist.append(image)
+        else:
+            break
         i += 1
-        dt = ndimage.distance_transform_edt(data_copy)
-        edge = np.where(dt >= 2)
 
-        randlist_size = random.uniform(0.3, 0.7)
-        randlist = np.random.randint(0, len(edge[0]), math.floor(randlist_size*len(edge[0])))
-        col1 = edge[0]
-        col2 = edge[1]
+    return imglist
 
-        col1rand = [x for x in col1[randlist]]
-        col2rand = [x for x in col2[randlist]]
-
-        data_copy = pixel_off(data_copy, col1rand, col2rand)
-
-        plt.imsave(out_dir+'0-lx'+'-'+str(i)+'.tif', data_copy, cmap='binary')
+def decline(a, b, i):
+    return (a-((a/i)**i), b-((b/i)**i))
 
 
-def pixel_off(image, col1, col2):
-    for i in col1:
-        for j in col2:
-            image[i, j] == 0
-    return image
+def shuffled(a):
+    np.random.shuffle(a)
+    return a
 
-iter(5)
+fig = plt.figure()
+imgl = iter(150)
+img = plt.imshow(imgl[0], cmap='gray')
 
+def updatefig(j):
+    img.set_array(imgl[j])
+    return [img]
 
-# def iterate(image):
-#     data_copy = data
-#     dt = ndimage.distance_transform_edt(data_copy)
-#     edge = np.where(dt == 1)
-
-#     randlist_size = random.uniform(0.3, 0.7)
-#     randlist = np.random.randint(0, len(edge[0]), math.floor(randlist_size*len(edge[0])))
-#     col1 = edge[0]
-#     col2 = edge[1]
-
-#     col1rand = [x for x in col1[randlist]]
-#     col2rand = [x for x in col2[randlist]]
-
-#     for j in col1rand:
-#         for k in col2rand:
-#             data_copy[j, k] == 0
-
-#     data_deg = data_copy
-    
-#     plt.imsave(out_dir+'0-lx'+'_'+str(i)+'.tif', data_deg, cmap='binary')
-
-#     return data_deg
-
-
-# for i in np.arange(10):
-#     dt = ndimage.distance_transform_edt(data_copy)
-#     edge = np.where(dt == 1)
-    
-#     randlist_size = random.uniform(0.3, 0.7)
-#     randlist = np.random.randint(0, len(edge[0]), math.floor(randlist_size*len(edge[0])))
-#     col1 = edge[0]
-#     col2 = edge[1]
-
-#     col1rand = [i for i in col1[randlist]]
-#     col2rand = [i for i in col2[randlist]]
-
-#     for i in col1rand:
-#         for j in col2rand:
-#             data_copy[i, j] == 0
-
-#     data_copy = data_copy
-    
-
-
-# dt = ndimage.distance_transform_edt(imdata['0-lx']['raw_data'])
-
-# # plt.imshow(dt)
-# # plt.show()
-
-# one_loc = np.where(dt == 1)
-# # one_loc = zip(one_loc[0], one_loc[1])
-# print(len(one_loc[0]))
-
-# randlist_size = random.uniform(0.3, 0.7)
-# print(randlist_size)
-
-# randlist = np.random.randint(0, len(one_loc[0]), math.floor(randlist_size*len(one_loc[0])))
-# print(len(randlist))
-# print(min(randlist), max(randlist))
-# print(randlist)
-
-# col1 = one_loc[0]
-# col2 = one_loc[1]
-
-# col1_rand = [i for i in col1[randlist]]
-# col2_rand = [i for i in col2[randlist]]
-
-# data_copy = imdata['0-lx']['raw_data']
-
-# for i in col1_rand:
-#     for j in col2_rand:
-#         data_copy[i, j] == 0
-
-# plt.imshow(data_copy)
-# plt.show()
-
-
-
-# plt.imshow(imdata['0-lx']['raw_data'])
+ani = matplotlib.animation.FuncAnimation(fig, updatefig, frames=range(150), interval=100, blit=True, repeat=True)
+ani.save(out_dir+'anim.gif', writer='imagemagick', fps=10, bitrate=-1)
 # plt.show()
