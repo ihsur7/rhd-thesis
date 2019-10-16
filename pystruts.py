@@ -121,7 +121,7 @@ class ImageImporter(object):
     def import_image(self, image):
         self.data[image] = {}
         self.data[image]["raw_data"] = np.array(Image.open(
-            pyd.Directory(self.inputdir + image + '.tif').InputDIR()
+            pyd.Directory(self.inputdir + image + '.png').InputDIR() #.tif
         ))
         return self.data
         
@@ -136,6 +136,10 @@ class Filters(object):
         self.data[im]["filter"] = ndimage.median_filter(
             self.data[im]["raw_data"], size = self.min_size
         )
+        return self.data
+    def none(self):
+        im = list(self.data)[0]
+        self.data[im]["filter"] = self.data[im]["raw_data"]
         return self.data
 
 class LocalThickness(object):
