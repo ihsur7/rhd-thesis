@@ -3,14 +3,20 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 import scipy.ndimage
+import scipy.interpolate
 
-E_array = np.array([[0, 0, 3.49612078, 3.395818561, 3.574984294],
-                    [0, 3.593840932, 3.583519062, 3.432509393, 3.493042067],
-                    [0, 3.295204051, 3.417707209, 3.507972937, 3.819293868],
-                    [0, 3.498358303, 3.493396481, 3.505547483, 3.823644558],
-                    [0, 3.629423336, 3.800265289, 3.885838633, 3.479162909]])
+E_array = np.array([[0, 0, 3.072988331, 3.28906711, 3.532306716],
+                    [0, 3.047586194, 3.12582417, 3.403719195, 3.597742014],
+                    [2.909085043, 3.009320386, 3.303613553, 3.116011416, 3.378904309],
+                    [3.044460827, 3.160782701, 3.24340315, 3.220933391, 3.536180829],
+                    [0, 3.055505075, 3.203535298, 3.294723439, 3.216243253]])
 
-E_array = scipy.ndimage.zoom(E_array, 3)
+# x = y = np.arange(5)
+# xi, yi = np.meshgrid(x, y)
+
+# E_array = scipy.interpolation.griddata((xi, yi), E_array, method='cubic')
+
+# E_array = scipy.ndimage.zoom(E_array,3)
 
 # print(E_array)
 
@@ -31,14 +37,15 @@ E_array = scipy.ndimage.zoom(E_array, 3)
 # pp = plt.contourf(E_array, apha=0.5, antialiased=True)
 # subplot1.contourf()
 # implot.imshow()
-img = plt.imread('W0-NZ-indent-2-color-crop.jpg')
+img = plt.imread('W20-NZ-indent-color-crop.tif')
 
 fig, ax = plt.subplots()
-ax.imshow(img, interpolation='none', extent=[-1.5, 5.5, -1.5, 5.5])
+ax.imshow(img, extent=[-1.25, 5.25, -1.25, 5.25])
 # ax.contourf(E_array, alpha=.5)
 plot = ax.contourf(E_array, alpha=0.75, cmap='rainbow')
 cb = fig.colorbar(plot)
 cb.set_label('Elastic Modulus/E (GPa)')
 plt.axis('off')
-plt.title('W0-NZ')
+
+plt.title('W20-NZ')
 plt.show()
