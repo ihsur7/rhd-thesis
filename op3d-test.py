@@ -1,18 +1,24 @@
 import pydirectory as pyd
-# import open3d as otd
+import open3d as otd
+import pymesh
 import numpy as np
-from stl import mesh
+# import stl
 import numpy
 import scipy as sp
 import PIL.Image as Image
-import matplotlib.pyplt as plt
+import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import os
+import pyassimp
+from pyntcloud import PyntCloud
+import pandas as pd
 
-in_dir = "/data/sample1/25/uct/tiff/"
+in_dir = "/data/sample1/25/uct/tiff/" #'/data/sample1/25/model/25.stl' #"/data/sample1/25/uct/tiff/"
 
 input_dir = pyd.Directory(in_dir).InputDIR()
 
+# model = pyassimp.load(input_dir)
+# print(len(model.meshes))
 
 class Voxelize:
     def __init__(self, directory):
@@ -23,21 +29,27 @@ class Voxelize:
         arr = np.empty([res[0], res[1], len(os.listdir(self.directory))])
         # print(arr.shape)
         for i,j in enumerate(os.listdir(self.directory)):
-            arr[:,:,i] = np.asarray(Image.open(self.directory+j))
+            arr[:,:,i] = np.asarray(Image.open(self.directory+j), dtype=bool)
             # print(im.shape)
             # print(arr[i].shape)
             # arr[:,:,i] = im
         # print(arr)
         return arr
 
-    def saveSTL(self, filename):
-        pass
-
-    def getBoundingBox(self):
-        pass
-
 
 a = Voxelize(input_dir).toNumpy()
-figure = plt.figure()
-axes = Axes3d(figure)
-mesharr = mesh.Mesh.
+
+points = pd.DataFrame(a)
+print(points)
+
+z,x,y = a.nonzero()
+# b = a.toNumpy()
+# print(b.shape)
+# c = a.NumpytoVtk(b)
+# print(c)
+
+# fig = plt.figure()
+# ax = fig.gca(projection='3d')
+# ax.set_aspect('equal')
+# ax.voxels(a, edgecolor='k')
+# plt.show()
