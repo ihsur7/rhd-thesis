@@ -1,6 +1,5 @@
 import pydirectory as pyd
 import open3d as otd
-import pymesh
 import numpy as np
 # import stl
 import numpy
@@ -35,14 +34,57 @@ class Voxelize:
             # arr[:,:,i] = im
         # print(arr)
         return arr
+    
+    def coordArray(self):
+        arr = self.toNumpy()
+        coord = np.asarray(np.where(arr))
+        coords = np.empty((len(coord[0]), 3), dtype=np.int64)
+        for i in np.arange(len(coord[0])):
+            coords[i] = coord[:,i]
+        return coords
 
 
-a = Voxelize(input_dir).toNumpy()
+a = Voxelize(input_dir).coordArray()
 
-points = pd.DataFrame(a)
-print(points)
+# Pass xyz to Open3D.otd.geometry.PointCloud and visualize
 
-z,x,y = a.nonzero()
+pcd = otd.geometry.PointCloud()
+pcd.points = otd.utility.Vector3dVector(a)
+otd.io.write_point_cloud("sync.ply", pcd)
+
+vox = otd.geometry.VoxelGrid()
+vox.create_from_point_cloud(1, pcd.points)
+
+# Load saved point cloud and visualize it
+pcd_load = otd.io.read_point_cloud("sync.ply")
+otd.visualization.draw_geometries([pcd_load])
+
+'''
+x = np.linspace(-3, 3, 401)
+mesh_x, mesh_y = np.meshgrid(x, x)
+z = np.sinc((np.power(mesh_x, 2) + np.power(mesh_y, 2)))
+z_norm = (z - z.min()) / (z.max() - z.min())
+xyz = np.zeros((np.size(mesh_x), 3))
+xyz[:, 0] = np.reshape(mesh_x, -1)
+xyz[:, 1] = np.reshape(mesh_y, -1)
+xyz[:, 2] = np.reshape(z_norm, -1)
+print('xyz')
+print(xyz)
+
+# Pass xyz to Open3D.otd.geometry.PointCloud and visualize
+pcd = otd.geometry.PointCloud()
+pcd.points = otd.utility.Vector3dVector(xyz)
+otd.io.write_point_cloud("sync.ply", pcd)
+
+# Load saved point cloud and visualize it
+pcd_load = otd.io.read_point_cloud("sync.ply")
+otd.visualization.draw_geometries([pcd_load])
+
+'''
+# points = pd.DataFrame(a)
+# print(points)
+
+# z,x,y = a.nonzero()
 # b = a.toNumpy()
 # print(b.shape)
 # c = a.NumpytoVtk(b)
