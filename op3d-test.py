@@ -43,7 +43,10 @@ class Voxelize:
             coords[i] = coord[:,i]
         return coords
 
-
+    #add method that takes coordinates from coordArray and turns it back to numpy array
+    def npArray(self):
+        pass
+    
 a = Voxelize(input_dir).coordArray()
 
 # Pass xyz to Open3D.otd.geometry.PointCloud and visualize
