@@ -26,26 +26,37 @@ class Voxelize:
     def toNumpy(self):
         res = np.asarray(Image.open(self.directory+os.listdir(self.directory)[0])).shape
         arr = np.empty([res[0], res[1], len(os.listdir(self.directory))])
+        res1 = arr.shape
         # print(arr.shape)
         for i,j in enumerate(os.listdir(self.directory)):
             arr[:,:,i] = np.asarray(Image.open(self.directory+j), dtype=bool)
-            # print(im.shape)
-            # print(arr[i].shape)
-            # arr[:,:,i] = im
-        # print(arr)
-        return arr
+        return arr, res1
     
     def coordArray(self):
-        arr = self.toNumpy()
+        arr = self.toNumpy()[0]
         coord = np.asarray(np.where(arr))
         coords = np.empty((len(coord[0]), 3), dtype=np.int64)
         for i in np.arange(len(coord[0])):
             coords[i] = coord[:,i]
-        return coords
+        newCoords = self.addMatProps()
+        return newCoords
 
-    #add method that takes coordinates from coordArray and turns it back to numpy array
+    def addMatProps(self):
+        arr = self.coordArray()
+        print(arr)
+        vals = [0, 0, 0]
+        for i in arr:
+            np.append(i, vals)
+        print(arr)
+        return arr
+
     def npArray(self):
-        pass
+        cArray = self.coordArray()[0]
+        res = self.toNumpy()[1]
+        nArray = np.empty(shape=(res), dtype=bool)
+        for i in cArray:
+            nArray[i[0]][i[1]][i[2]] = True
+        return nArray
     
 a = Voxelize(input_dir).coordArray()
 
@@ -84,17 +95,3 @@ pcd_load = otd.io.read_point_cloud("sync.ply")
 otd.visualization.draw_geometries([pcd_load])
 
 '''
-# points = pd.DataFrame(a)
-# print(points)
-
-# z,x,y = a.nonzero()
-# b = a.toNumpy()
-# print(b.shape)
-# c = a.NumpytoVtk(b)
-# print(c)
-
-# fig = plt.figure()
-# ax = fig.gca(projection='3d')
-# ax.set_aspect('equal')
-# ax.voxels(a, edgecolor='k')
-# plt.show()
