@@ -38,17 +38,14 @@ class Voxelize:
         coords = np.empty((len(coord[0]), 3), dtype=np.int64)
         for i in np.arange(len(coord[0])):
             coords[i] = coord[:,i]
-        newCoords = self.addMatProps()
-        return newCoords
+        return coords
 
-    def addMatProps(self):
-        arr = self.coordArray()
-        print(arr)
-        vals = [0, 0, 0]
-        for i in arr:
-            np.append(i, vals)
-        print(arr)
-        return arr
+    def matpropsArray(self):
+        # Stores properties of points using an array of same length as coord array. 
+        # 4 can be changed to a different number depending on what needs to be stored.
+        carray = self.coordArray()
+        mparr = np.empty((np.shape(carray)[0], 4), dtype=int)
+        return mparr
 
     def npArray(self):
         cArray = self.coordArray()[0]
@@ -64,14 +61,15 @@ a = Voxelize(input_dir).coordArray()
 
 pcd = otd.geometry.PointCloud()
 pcd.points = otd.utility.Vector3dVector(a)
-otd.io.write_point_cloud("sync.ply", pcd)
+# otd.io.write_point_cloud("sync.ply", pcd)
+otd.visualization.draw_geometries([pcd])
 
-vox = otd.geometry.VoxelGrid()
-vox.create_from_point_cloud(1, pcd.points)
+# vox = otd.geometry.VoxelGrid()
+# vox.create_from_point_cloud(1, pcd.points)
 
 # Load saved point cloud and visualize it
-pcd_load = otd.io.read_point_cloud("sync.ply")
-otd.visualization.draw_geometries([pcd_load])
+# pcd_load = otd.io.read_point_cloud("sync.ply")
+# otd.visualization.draw_geometries([pcd_load])
 
 '''
 x = np.linspace(-3, 3, 401)
