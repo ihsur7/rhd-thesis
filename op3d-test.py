@@ -14,9 +14,6 @@ in_dir = "/data/sample1/25/uct/tiff/" #'/data/sample1/25/model/25.stl' #"/data/s
 
 input_dir = pyd.Directory(in_dir).InputDIR()
 
-# model = pyassimp.load(input_dir)
-# print(len(model.meshes))
-
 class Voxelize:
     def __init__(self, directory, booltype = False):
         self.directory = directory
@@ -96,34 +93,35 @@ class PixelClassifier():
         #x_i,j = -1 -> eroded
         #prop_array[n][1] = s
         #prop_array[n][2] = molecular weight
+        #prop_array[n][3] = pseudo-elastic modulus
         for i in self.prop_array:
-            crys = self.crystallinity(chi)
-            pstate = self.initpixelState(chi)
-            i[0] = crys[1]
-            i[1] = pstate
+            i[0] = self.crystallinity(chi)
+            i[1] = self.initpixelState(chi)
+        return self.prop_array
     
     def crystallinity(self, chi):
         #crystallinity = probability a pixel will be crystalline
         bin_prob = np.random.binomial(1, chi)
         if bin_prob == 1:
-            c = chi
             x_chi = 1
         else: 
-            c = 1 - chi
             x_chi = 0
-        return c, x_chi
+        return x_chi
     
     def initpixelState(self, chi):
         crys = self.crystallinity(chi)
-        if crys[1] == -1:
+        if crys == -1:
             s = 0
-        elif crys[1] == 1:
+        elif crys == 1:
             s = 1
-        elif crys[1] == 0:
+        elif crys == 0:
             s = 1
         else:
             raise ValueError('Undefined pixel state.')
         return s
+
+    def molecularWeight(self, mw0):
+        pass
     
     def update_pixel(self):
         pass
@@ -132,41 +130,42 @@ def binomial(n, p, size=None):
     return np.random.binomial(n, p, size)
 print(binomial(1, 0.3))
 
-'''
-# Pass xyz to Open3D.otd.geometry.PointCloud and visualize
+def comment():
+    '''
+    # Pass xyz to Open3D.otd.geometry.PointCloud and visualize
 
-pcd = otd.geometry.PointCloud()
-pcd.points = otd.utility.Vector3dVector(a)
-# otd.io.write_point_cloud("sync.ply", pcd)
-otd.visualization.draw_geometries([pcd])
+    pcd = otd.geometry.PointCloud()
+    pcd.points = otd.utility.Vector3dVector(a)
+    # otd.io.write_point_cloud("sync.ply", pcd)
+    otd.visualization.draw_geometries([pcd])
 
-# vox = otd.geometry.VoxelGrid()
-# vox.create_from_point_cloud(1, pcd.points)
+    # vox = otd.geometry.VoxelGrid()
+    # vox.create_from_point_cloud(1, pcd.points)
 
-# Load saved point cloud and visualize it
-# pcd_load = otd.io.read_point_cloud("sync.ply")
-# otd.visualization.draw_geometries([pcd_load])
+    # Load saved point cloud and visualize it
+    # pcd_load = otd.io.read_point_cloud("sync.ply")
+    # otd.visualization.draw_geometries([pcd_load])
 
-'''
-'''
-x = np.linspace(-3, 3, 401)
-mesh_x, mesh_y = np.meshgrid(x, x)
-z = np.sinc((np.power(mesh_x, 2) + np.power(mesh_y, 2)))
-z_norm = (z - z.min()) / (z.max() - z.min())
-xyz = np.zeros((np.size(mesh_x), 3))
-xyz[:, 0] = np.reshape(mesh_x, -1)
-xyz[:, 1] = np.reshape(mesh_y, -1)
-xyz[:, 2] = np.reshape(z_norm, -1)
-print('xyz')
-print(xyz)
+    '''
+    '''
+    x = np.linspace(-3, 3, 401)
+    mesh_x, mesh_y = np.meshgrid(x, x)
+    z = np.sinc((np.power(mesh_x, 2) + np.power(mesh_y, 2)))
+    z_norm = (z - z.min()) / (z.max() - z.min())
+    xyz = np.zeros((np.size(mesh_x), 3))
+    xyz[:, 0] = np.reshape(mesh_x, -1)
+    xyz[:, 1] = np.reshape(mesh_y, -1)
+    xyz[:, 2] = np.reshape(z_norm, -1)
+    print('xyz')
+    print(xyz)
 
-# Pass xyz to Open3D.otd.geometry.PointCloud and visualize
-pcd = otd.geometry.PointCloud()
-pcd.points = otd.utility.Vector3dVector(xyz)
-otd.io.write_point_cloud("sync.ply", pcd)
+    # Pass xyz to Open3D.otd.geometry.PointCloud and visualize
+    pcd = otd.geometry.PointCloud()
+    pcd.points = otd.utility.Vector3dVector(xyz)
+    otd.io.write_point_cloud("sync.ply", pcd)
 
-# Load saved point cloud and visualize it
-pcd_load = otd.io.read_point_cloud("sync.ply")
-otd.visualization.draw_geometries([pcd_load])
+    # Load saved point cloud and visualize it
+    pcd_load = otd.io.read_point_cloud("sync.ply")
+    otd.visualization.draw_geometries([pcd_load])
 
-'''
+    '''
