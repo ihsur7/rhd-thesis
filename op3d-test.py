@@ -123,6 +123,10 @@ class PixelClassifier():
     def molecularWeight(self, mw0):
         pass
     
+    def modulus(self, decay, e):
+        e_p = 1
+        pass
+
     def update_pixel(self):
         pass
     
