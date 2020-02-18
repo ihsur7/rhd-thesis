@@ -3,6 +3,7 @@ import open3d as otd
 import numpy as np
 # import stl
 import numpy
+import random
 import scipy as sp
 import PIL.Image as Image
 import matplotlib.pyplot as plt
@@ -20,6 +21,11 @@ class Voxelize:
         self.booltype = booltype
 
     def toNumpy(self):
+        """[summary]
+        
+        Returns:
+            array, array -- converts image to numpy array and returns the array and its size.
+        """
         res = np.asarray(Image.open(self.directory+os.listdir(self.directory)[0])).shape
         arr = np.empty([res[0], res[1], len(os.listdir(self.directory))])
         res1 = arr.shape
@@ -29,6 +35,11 @@ class Voxelize:
         return arr, res1
     
     def coordArray(self):
+        """[summary]
+        
+        Returns:
+            array -- that contains the coordinates of the pixels that are white.
+        """
         arr = self.toNumpy()[0]
         coord = np.asarray(np.where(arr))
         coords = np.empty((len(coord[0]), 3), dtype=np.int64)
@@ -40,6 +51,15 @@ class Voxelize:
             return self.npArray()
 
     def matpropsArray(self):
+        """[summary]
+        [chi, pixel state, e, prop]
+
+        Can make an input to decide how many properties are stored,
+        e.g. matpropsArray(self, numprops)
+
+        Returns:
+            array -- empty array of the length of coordArray that containsvarious material properties.
+        """
         # Stores properties of points using an array of same length as coord array. 
         # 4 can be changed to a different number depending on what needs to be stored.
         carray = self.coordArray()
@@ -47,9 +67,17 @@ class Voxelize:
         return mparr
 
     def npArray(self):
-        cArray = self.coordArray()[0]
+        """[summary]
+        
+        Returns:
+            array -- identical to toNumyp() but array is boolean.
+        """
+        cArray = self.coordArray()
+        # print(cArray)
         res = self.toNumpy()[1]
+        # print(res)
         nArray = np.empty(shape=(res), dtype=bool)
+        # print(nArray)
         for i in cArray:
             nArray[i[0]][i[1]][i[2]] = True
         return nArray
@@ -75,19 +103,22 @@ def neighbours(x, y, z, res):
     return n_list
 
 a = Voxelize(input_dir)
-# a.coordArray()
-# print(a.coordArray()[0])
+coords = a.coordArray()
+props = a.matpropsArray()
+# print(a.coordArray())
+# print(a.npArray())
 # arr_shape = Voxelize(input_dir).toNumpy()[1]
 # print(arr_shape)
 # n = neighbours(2,2,2, arr_shape)
 # print(n, len(n))
-
-class PixelClassifier():
+class InitPixelClassifier():
+    """Object Class that initialises the properties of the voxel model.
+    """
     def __init__(self, coords_array, prop_array):
         self.coords_array = coords_array
         self.prop_array = prop_array
 
-    def initClassify(self, chi):
+    def initClassify(self, chi, mw0, e):
         #prop_array[n][0] = x_i,j
         #x_i,j = 0 -> amorphous, x_i,j = 1 -> crystalline,
         #x_i,j = -1 -> eroded
@@ -97,16 +128,24 @@ class PixelClassifier():
         for i in self.prop_array:
             i[0] = self.crystallinity(chi)
             i[1] = self.initpixelState(chi)
+            i[2] = self.initModulus(e)
+            i[3] = self.initMolecularWeight(mw0)
         return self.prop_array
     
     def crystallinity(self, chi):
         #crystallinity = probability a pixel will be crystalline
-        bin_prob = np.random.binomial(1, chi)
-        if bin_prob == 1:
-            x_chi = 1
-        else: 
-            x_chi = 0
-        return x_chi
+        if type(chi) == float:
+            bin_prob = np.random.binomial(1, chi)
+            if bin_prob == 1:
+                x_chi = 1
+            else: 
+                x_chi = 0
+            return x_chi
+        elif type(chi) == int:
+            self.crystallinity(float(chi))
+        
+            print('Ensure chi is float.')
+
     
     def initpixelState(self, chi):
         crys = self.crystallinity(chi)
@@ -120,19 +159,47 @@ class PixelClassifier():
             raise ValueError('Undefined pixel state.')
         return s
 
-    def molecularWeight(self, mw0):
-        pass
+    def initMolecularWeight(self, mw0):
+        return mw0
     
-    def modulus(self, decay, e):
-        e_p = 1
-        pass
+    def initModulus(self, e):
+        e_scalar = randScalar(0.9, 1)
+        e_val = e * e_scalar
+        return e_val
 
-    def update_pixel(self):
-        pass
+scaffold = InitPixelClassifier(coords, props)
+scaffold.initClassify(0.8, 10000, 3.4)
+
+def randScalar(min, max):
+    scalar = min + (random.random() * (max - min))
+    return scalar
     
 def binomial(n, p, size=None):
     return np.random.binomial(n, p, size)
-print(binomial(1, 0.3))
+# print(binomial(1, 0.3))
+
+class UpdateModel():
+    """Object Class that updates the properties of the voxel model.
+    """
+    def __init__(self, coords_array, prop_array):
+        self.coords_array = coords_array
+        self.prop_array = prop_array
+    
+    def update(self):
+        pass
+
+    def updtCrystallinity(self):
+        pass
+
+    def updtPixelState(self):
+        pass
+
+    def updtMolecularWeight(self):
+        pass
+
+    def updtModulus(self):
+        pass
+
 
 def comment():
     '''
