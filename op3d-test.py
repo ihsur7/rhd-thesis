@@ -5,6 +5,7 @@ import numpy as np
 import numpy
 import random
 import scipy as sp
+import scipy.ndimage as ndimage
 import PIL.Image as Image
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -114,8 +115,9 @@ props = a.matpropsArray()
 class InitPixelClassifier():
     """Object Class that initialises the properties of the voxel model.
     """
-    def __init__(self, coords_array, prop_array):
+    def __init__(self, coords_array, np_array, prop_array):
         self.coords_array = coords_array
+        self.np_array = self.np_array
         self.prop_array = prop_array
 
     def initClassify(self, chi, mw0, e):
@@ -181,17 +183,26 @@ def binomial(n, p, size=None):
 class UpdateModel():
     """Object Class that updates the properties of the voxel model.
     """
-    def __init__(self, coords_array, prop_array):
+    def __init__(self, coords_array, np_array, prop_array):
         self.coords_array = coords_array
+        self.np_array = np_array
         self.prop_array = prop_array
     
     def update(self):
+        self.updtCrystallinity()
+        self.updtPixelState()
+        self.updtMolecularWeight()
+        self.updtModulus()
         pass
 
-    def updtCrystallinity(self):
+    def updtCrystallinity(self, chi):
+        edt = ndimage.distance_transform_edt(self.np_array)
+        #check edt layer by layer, if edt <= 2 (pixel beside void) --> update its crystallinity
+
         pass
 
     def updtPixelState(self):
+        crys = self.
         pass
 
     def updtMolecularWeight(self):
