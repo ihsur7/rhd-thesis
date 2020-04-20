@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import os
 import pandas as pd
+import pyntcloud
+
 
 in_dir = "/data/sample1/25/uct/tiff/" #'/data/sample1/25/model/25.stl' #"/data/sample1/25/uct/tiff/"
 
@@ -64,8 +66,7 @@ class Voxelize:
         # Stores properties of points using an array of same length as coord array. 
         # 4 can be changed to a different number depending on what needs to be stored.
         carray = self.coordArray()
-        mparr = np.empty((np.shape(carray)[0], 4), dtype=int)
-        return mparr
+        return np.empty((np.shape(carray)[0], 4), dtype=int)
 
     def npArray(self):
         """[summary]
@@ -98,14 +99,25 @@ def neighbours(x, y, z, res):
     for i in x_range:
         for j in y_range: #check if coordinates are negative or larger than image
             for k in z_range:
-                if -1 < x <= res[0] and -1 < y <= res[1] and -1 < z <= res[2]:
-                    if (x != i or y != j or z != k) and (0 <= i <= res[0]) and (0 <= j <= res[1]) and (0 <= k <= res[2]):
-                        n_list.append([i, j, k])
+                if (
+                    -1 < x <= res[0]
+                    and -1 < y <= res[1]
+                    and -1 < z <= res[2]
+                    and (x != i or y != j or z != k)
+                    and (0 <= i <= res[0])
+                    and (0 <= j <= res[1])
+                    and (0 <= k <= res[2])
+                ):
+                    n_list.append([i, j, k])
     return n_list
+
+def randScalar(min, max):
+    return min + (random.random() * (max - min))
 
 a = Voxelize(input_dir)
 coords = a.coordArray()
 props = a.matpropsArray()
+nparr = a.npArray()
 # print(a.coordArray())
 # print(a.npArray())
 # arr_shape = Voxelize(input_dir).toNumpy()[1]
@@ -117,7 +129,7 @@ class InitPixelClassifier():
     """
     def __init__(self, coords_array, np_array, prop_array):
         self.coords_array = coords_array
-        self.np_array = self.np_array
+        self.np_array = np_array
         self.prop_array = prop_array
 
     def initClassify(self, chi, mw0, e):
@@ -138,14 +150,10 @@ class InitPixelClassifier():
         #crystallinity = probability a pixel will be crystalline
         if type(chi) == float:
             bin_prob = np.random.binomial(1, chi)
-            if bin_prob == 1:
-                x_chi = 1
-            else: 
-                x_chi = 0
-            return x_chi
+            return 1 if bin_prob == 1 else 0
         elif type(chi) == int:
             self.crystallinity(float(chi))
-        
+
             print('Ensure chi is float.')
 
     
@@ -153,9 +161,7 @@ class InitPixelClassifier():
         crys = self.crystallinity(chi)
         if crys == -1:
             s = 0
-        elif crys == 1:
-            s = 1
-        elif crys == 0:
+        elif crys in [1, 0]:
             s = 1
         else:
             raise ValueError('Undefined pixel state.')
@@ -166,15 +172,13 @@ class InitPixelClassifier():
     
     def initModulus(self, e):
         e_scalar = randScalar(0.9, 1)
-        e_val = e * e_scalar
-        return e_val
+        return e * e_scalar
 
-scaffold = InitPixelClassifier(coords, props)
+scaffold = InitPixelClassifier(coords, nparr, props)
 scaffold.initClassify(0.8, 10000, 3.4)
-
-def randScalar(min, max):
-    scalar = min + (random.random() * (max - min))
-    return scalar
+# print(coords)
+# print(nparr)
+# print(props)
     
 def binomial(n, p, size=None):
     return np.random.binomial(n, p, size)
@@ -202,7 +206,7 @@ class UpdateModel():
         pass
 
     def updtPixelState(self):
-        crys = self.
+        crys = None
         pass
 
     def updtMolecularWeight(self):
@@ -212,42 +216,44 @@ class UpdateModel():
         pass
 
 
-def comment():
-    '''
-    # Pass xyz to Open3D.otd.geometry.PointCloud and visualize
 
-    pcd = otd.geometry.PointCloud()
-    pcd.points = otd.utility.Vector3dVector(a)
-    # otd.io.write_point_cloud("sync.ply", pcd)
-    otd.visualization.draw_geometries([pcd])
+# md = pyntcloud
+# Pass xyz to Open3D.otd.geometry.PointCloud and visualize
 
-    # vox = otd.geometry.VoxelGrid()
-    # vox.create_from_point_cloud(1, pcd.points)
+pcd = otd.geometry.PointCloud()
+pcd.points = otd.utility.Vector3dVector(a.coordArray())
+# otd.io.write_point_cloud("sync.ply", pcd)
 
-    # Load saved point cloud and visualize it
-    # pcd_load = otd.io.read_point_cloud("sync.ply")
-    # otd.visualization.draw_geometries([pcd_load])
+#from o3d to pyntcloud
+cloud = pyntcloud.from_instance("open3d", pcd.points)
+print(cloud)
 
-    '''
-    '''
-    x = np.linspace(-3, 3, 401)
-    mesh_x, mesh_y = np.meshgrid(x, x)
-    z = np.sinc((np.power(mesh_x, 2) + np.power(mesh_y, 2)))
-    z_norm = (z - z.min()) / (z.max() - z.min())
-    xyz = np.zeros((np.size(mesh_x), 3))
-    xyz[:, 0] = np.reshape(mesh_x, -1)
-    xyz[:, 1] = np.reshape(mesh_y, -1)
-    xyz[:, 2] = np.reshape(z_norm, -1)
-    print('xyz')
-    print(xyz)
+otd.visualization.draw_geometries([pcd])
 
-    # Pass xyz to Open3D.otd.geometry.PointCloud and visualize
-    pcd = otd.geometry.PointCloud()
-    pcd.points = otd.utility.Vector3dVector(xyz)
-    otd.io.write_point_cloud("sync.ply", pcd)
+# vox = otd.geometry.VoxelGrid()
+# vox.create_from_point_cloud(1, pcd.points)
 
-    # Load saved point cloud and visualize it
-    pcd_load = otd.io.read_point_cloud("sync.ply")
-    otd.visualization.draw_geometries([pcd_load])
+# Load saved point cloud and visualize it
+# pcd_load = otd.io.read_point_cloud("sync.ply")
+# otd.visualization.draw_geometries([pcd_load])
 
-    '''
+# x = np.linspace(-3, 3, 401)
+# mesh_x, mesh_y = np.meshgrid(x, x)
+# z = np.sinc((np.power(mesh_x, 2) + np.power(mesh_y, 2)))
+# z_norm = (z - z.min()) / (z.max() - z.min())
+# xyz = np.zeros((np.size(mesh_x), 3))
+# xyz[:, 0] =  np.reshape(mesh_x, -1)
+# xyz[:, 1] = np.reshape(mesh_y, -1)
+# xyz[:, 2] = np.reshape(z_norm, -1)
+# print('xyz')
+# print(xyz)
+
+# Pass xyz to Open3D.otd.geometry.PointCloud and visualize
+# pcd = otd.geometry.PointCloud()
+# pcd.points = otd.utility.Vector3dVector(xyz)
+# otd.io.write_point_cloud("sync.ply", pcd)
+
+# Load saved point cloud and visualize it
+# pcd_load = otd.io.read_point_cloud("sync.ply")
+# otd.visualization.draw_geometries([pcd_load])
+
