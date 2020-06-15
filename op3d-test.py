@@ -17,7 +17,18 @@ import PVGeo as pg
 
 in_dir = "/data/sample1/25/uct/tiff/"  # '/data/sample1/25/model/25.stl' #"/data/sample1/25/uct/tiff/"
 
-input_dir = pyd.Directory(in_dir).InputDIR()
+out_dir = "/data/deg_test_output/"
+
+dir = pyd.Directory(in_dir, out_dir)
+
+input_dir = dir.InputDIR()
+
+output_dir = dir.OutputDIR()
+
+new_input_dir = pyd.Directory(out_dir).InputDIR()
+
+print(input_dir)
+print(output_dir)
 
 
 class Voxelize:
@@ -25,9 +36,8 @@ class Voxelize:
         self.directory = directory
         self.booltype = booltype
 
-    def toNumpy(self):
+    def to_numpy(self):
         """[summary]
-        
         Returns:
             array, array -- converts image to numpy array and returns the array and its size.
         """
@@ -39,13 +49,13 @@ class Voxelize:
             arr[:, :, i] = np.asarray(Image.open(self.directory + j), dtype=bool)
         return arr, res1
 
-    def coordArray(self):
+    def coord_array(self):
         """[summary]
         
         Returns:
             array -- that contains the coordinates of the pixels that are white.
         """
-        arr = self.toNumpy()[0]
+        arr = self.to_numpy()[0]
         coord = np.asarray(np.where(arr))
         coords = np.empty((len(coord[0]), 3), dtype=np.int64)
         for i in np.arange(len(coord[0])):
@@ -53,32 +63,32 @@ class Voxelize:
         if not self.booltype:
             return coords
         else:
-            return self.npArray()
+            return self.np_array()
 
-    def matpropsArray(self, numprops):
+    def matprops_array(self, numprops):
         """[summary]
         [chi, pixel state, lifetime, adjacent, e, molecular weight]
 
         Can make an input to decide how many properties are stored,
-        e.g. matpropsArray(self, numprops)
+        e.g. matprops_array(self, numprops)
 
         Returns:
-            array -- empty array of the length of coordArray that containsvarious material properties.
+            array -- empty array of the length of coord_array that containsvarious material properties.
         """
         # Stores properties of points using an array of same length as coord array. 
         # 4 can be changed to a different number depending on what needs to be stored.
-        carray = self.coordArray()
+        carray = self.coord_array()
         return np.empty((np.shape(carray)[0], numprops), dtype=int)
 
-    def npArray(self):
+    def np_array(self):
         """[summary]
         
         Returns:
             array -- identical to toNumyp() but array is boolean.
         """
-        cArray = self.coordArray()
+        cArray = self.coord_array()
         # print(cArray)
-        res = self.toNumpy()[1]
+        res = self.to_numpy()[1]
         # print(res)
         nArray = np.empty(shape=(res), dtype=bool)
         # print(nArray)
@@ -117,14 +127,14 @@ def neighbours(x, y, z, res):
     return n_list
 
 
-def randScalar(min, max):
-    return min + (random.random() * (max - min))
+def rand_scalar(min_val, max_val):
+    return min_val + (random.random() * (max_val - min_val))
 
 
 a = Voxelize(input_dir)
-coords = a.coordArray()
-props = a.matpropsArray(numprops=6)
-nparr = a.npArray()
+coords = a.coord_array()
+props = a.matprops_array(numprops=6)
+nparr = a.np_array()
 
 
 def adjacent(index, coords_array, loc_arr):
@@ -141,9 +151,9 @@ def adjacent(index, coords_array, loc_arr):
         return 0, a
 
 
-# print(a.coordArray())
-# print(a.npArray())
-# arr_shape = Voxelize(input_dir).toNumpy()[1]
+# print(a.coord_array())
+# print(a.np_array())
+# arr_shape = Voxelize(input_dir).to_numpy()[1]
 # print(arr_shape)
 # n = neighbours(2,2,2, arr_shape)
 # print(n, len(n))
@@ -156,7 +166,7 @@ class InitPixelClassifier:
         self.np_array = np_array
         self.prop_array = prop_array
 
-    def initClassify(self, chi, mw0, e):
+    def init_classify(self, chi, mw0, e):
         '''
         Add False values to 3D numpy array surrounding it.
         shp_x, shp_y, shp_z = np.shape(self.np_array)
@@ -176,7 +186,7 @@ class InitPixelClassifier:
         edt = ndimage.distance_transform_edt(self.np_array)
         loc = np.where(edt == 1)
         loc_arr = np.vstack((loc[0], loc[1], loc[2])).transpose()
-        # self.initAdjacent(loc_arr)
+        # self.init_adjacent(loc_arr)
 
         # prop_array[n][0] = x_i,j
         # x_i,j = 0 -> amorphous, x_i,j = 1 -> crystalline,
@@ -186,27 +196,24 @@ class InitPixelClassifier:
         # prop_array[n][3] = pseudo-elastic modulus
         for i, j in enumerate(self.prop_array):
             j[0] = self.init_crystallinity(chi)
-            j[1] = self.initpixelState(chi)
-            j[2] = self.initLife()
+            j[1] = self.init_pixel_state(chi)
+            j[2] = self.init_life()
             # print(i)
             j[3] = adjacent(i, self.coords_array, loc_arr)[0]
-            # j[3] = self.initAdjacent(i, loc_arr)
-            j[4] = self.initModulus(e)
-            j[5] = self.initMolecularWeight(mw0)
+            # j[3] = self.init_adjacent(i, loc_arr)
+            j[4] = self.init_modulus(e)
+            j[5] = self.init_molecular_weight(mw0)
         return self.prop_array, loc_arr
 
     def init_crystallinity(self, chi):
         # crystallinity = probability a pixel will be crystalline
-        # if type(chi) == float:
         bin_prob = np.random.binomial(1, chi)
         return 1 if bin_prob == 1 else 0
-        # elif type(chi) == int:
-        #     self.init_crystallinity(float(chi))
-        # print('Chi must be float.')
 
-    def initpixelState(self, chi):
+
+    def init_pixel_state(self, chi):
         '''
-
+        Initially all pixels are on (i.e. state = 1)
         '''
         # crys = self.init_crystallinity(chi)
         # if crys == -1:
@@ -217,7 +224,7 @@ class InitPixelClassifier:
         #     raise ValueError('Undefined pixel state.')
         return 1
 
-    def initLife(self):
+    def init_life(self):
         '''
         -1 = infinite life (only initially) --> once in contact with environment (at t = 0)
         update with random probability (life is in days, i.e. at t=0, voxels with life = 10 -> will last for 10 days)
@@ -225,18 +232,13 @@ class InitPixelClassifier:
         '''
         return -1
 
-    def initAdjacent(self, index, loc_arr):
+    def init_adjacent(self, index, loc_arr):
         '''
         1 for adjacent
         0 for not adjacent
         voxels on the edge are not marked adjacent. needs to be fixed.
         '''
-        # print(loc_arr)
-        # a = np.where((loc_arr == self.coords_array[index])).all(axis=1)[0]
-        # print('a is ', a)
-        # b = np.where((loc_arr[:,0] == self.coords_array[index][0] & loc_arr[:,1] == self.coords_array[index][1] & loc_arr[:,2] == self.coords_array[index][2]))[0]
         a = np.where((loc_arr == self.coords_array[index]).all(axis=1))[0]
-        # print('a is ', a)
         if a.size:
             # print('not empty')
             return 1
@@ -255,34 +257,25 @@ class InitPixelClassifier:
         #         if np.array_equal(j, k) is True:
         #             return 1
 
-    def initMolecularWeight(self, mw0):
+    def init_molecular_weight(self, mw0):
         return mw0
 
-    def initModulus(self, e):
-        e_scalar = randScalar(0.9, 1)
+    def init_modulus(self, e):
+        e_scalar = rand_scalar(0.9, 1)
         return e * e_scalar
 
 
 scaffold = InitPixelClassifier(coords, nparr, props)
-scaffold.initClassify(0.8, 10000, 3.4)
-
-
-# print(coords)
-# print(nparr)
-# print(props)
-# for i in props:
-#     if i[3] == 1:
-#         print(i)
+scaffold.init_classify(0.65, 10000, 3.4)
 
 
 def binomial(n, p, size=None):
     return np.random.binomial(n, p, size)
 
 
-# print(binomial(1, 0.3))
-
 class UpdateModel:
-    """Object Class that updates the properties of the voxel model.
+    """
+    Object Class that updates the properties of the voxel model.
     """
 
     def __init__(self, n, coords_array, np_array, prop_array):
@@ -290,16 +283,12 @@ class UpdateModel:
         self.coords_array = coords_array
         self.np_array = np_array
         self.prop_array = prop_array
-        # print(self.coords_array.shape)
-        # print(self.prop_array.shape)
 
     def update(self):
-        # self.updtCrystallinity()
-        self.updtLife(self.n)
-        self.updtMolecularWeight()
-        self.updtModulus()
+        self.updt_life(self.n)
+        self.updt_molecular_weight()
+        self.updt_modulus()
         self.updt_loc_array()
-        # print(self.np_array)
         return self.np_array, self.prop_array, self.coords_array
 
     def updt_loc_array(self):
@@ -311,7 +300,7 @@ class UpdateModel:
             j[3] = adjacent(i, self.coords_array, loc_arr)[0]
         return self.prop_array
 
-    def updtCrystallinity(self):
+    def updt_crystallinity(self):
         '''
         Crystallinity doesn't change of voxels (this function is invalid), kept here for reference
         '''
@@ -332,31 +321,25 @@ class UpdateModel:
                             self.prop_array[i][1] = 1
 
             break
-        # check edt layer by layer, if edt <= 2 (pixel beside void) --> update its crystallinity
-        # for slice in edt:
-        #     print(np.shape(slice))
 
-    def updtPixelState(self, index):
+    def updt_pixel_state(self, index):
         """
         index is for location that is deleted
         """
-        # print('index is ', index)
-        # print('coord array is ', self.coords_array[index])
-
         vox_x, vox_y, vox_z = self.coords_array[index]
         # print(vox_x, vox_y, vox_z)
         # old_arr = self.np_array
         self.np_array[vox_x][vox_y][vox_z] = False
+
         # print(self.np_array[vox_x][vox_y][vox_z])
         # print(np.array_equal(old_arr, self.np_array))
         # self.coords_array = np.delete(self.coords_array, index, axis=0)
         # self.prop_array = np.delete(self.prop_array, index, axis=0)
 
-
-    def updtLife(self, n):
+    def updt_life(self, n):
         # print('ieration ', n)
-        lam_a = 1
-        lam_c = 2
+        lam_a = 25
+        lam_c = 50
         for i, j in enumerate(self.prop_array):
             # check if adjacent
             if j[3] == 1:
@@ -376,12 +359,12 @@ class UpdateModel:
                 elif j[2] == 0:
                     j[1] = 0
                     j[3] = 0
-                    self.updtPixelState(i)
+                    self.updt_pixel_state(i)
 
-    def updtMolecularWeight(self):
+    def updt_molecular_weight(self):
         pass
 
-    def updtModulus(self):
+    def updt_modulus(self):
         pass
 
 
@@ -404,24 +387,51 @@ s = np.random.poisson(15, 10)
 # md.plot()
 # mdotd = md.to_instance(library='open3d')
 # print(mdotd)
-ptcloud = pv.PolyData(coords)
+
+week = 14*8
+newcoord = np.load(str(new_input_dir)+'coord_arr_'+str(week)+'.npy')
+newmatprops = np.load(str(new_input_dir)+'prop_arr_'+str(week)+'.npy')
+newnp = np.load(str(new_input_dir)+'np_arr_14.npy')
+print(newcoord.shape, newmatprops.shape)
+del_list = []
+for i, j in enumerate(newmatprops):
+    if j[1] == 0:
+        del_list.append(i)
+newmatprops = np.delete(newmatprops, del_list, axis=0)
+newcoord = np.delete(newcoord, del_list, axis=0)
+print(newcoord.shape, newmatprops.shape)
+ptcloud = pg.points_to_poly_data(newcoord)
+# ptcloud = pv.PolyData(newcoord)
+print(ptcloud)
 # print(ptcloud)
-data = props[:, 0]
-ptcloud['crystallinity'] = data
+data = newmatprops[:, 0]
+ptcloud['Crystallinity'] = data
 # ptcloud.plot()
 voxelizer = pg.filters.VoxelizePoints()
 grid = voxelizer.apply(ptcloud)
+grid.plot()
 
-for i in range(200):
-    # print(i)
-    updtmod = UpdateModel(i, coords, nparr, props).update()
-    if np.any(updtmod[0] == True):
-        print('True voxels present')
+# save npy file every N iteration
+#
+# n = np.arange(0, 154, 14)
+#
+# for i in range(142):
+#     updtmod = UpdateModel(i, coords, nparr, props).update()
+#     print(i)
+#     if i in n:
+#         np.save(str(output_dir + 'np_arr' + '_' + str(i)), updtmod[0])
+#         np.save(str(output_dir + 'prop_arr' + '_' + str(i)), updtmod[1])
+#         np.save(str(output_dir + 'coord_arr' + '_' + str(i)), updtmod[2])
+
+
+
+    # if np.any(updtmod[0] == True):
+    #     print('True voxels present')
 # grid.plot()
 # Pass xyz to Open3D.otd.geometry.PointCloud and visualize
 
 # pcd = otd.geometry.PointCloud()
-# pcd.points = otd.utility.Vector3dVector(mdotd) #(a.coordArray())
+# pcd.points = otd.utility.Vector3dVector(mdotd) #(a.coord_array())
 # otd.io.write_point_cloud("sync.ply", pcd)
 
 # from o3d to pyntcloud
