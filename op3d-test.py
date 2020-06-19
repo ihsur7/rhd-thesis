@@ -30,6 +30,16 @@ new_input_dir = pyd.Directory(out_dir).InputDIR()
 print(input_dir)
 print(output_dir)
 
+class Presets:
+    def __init__(self, led):
+        self.led = led
+        self.preset = {0.135: {"mw_loss_coeff": 1369}, \
+                    0.097: {"mw_loss_coeff": 1220}, \
+                    0.077: {"mw_loss_coeff": 1034}}
+
+    def mw_loss_coeff(self):
+        return self.preset[self.led]["mw_loss_coeff"]
+    
 
 class Voxelize:
     def __init__(self, directory, booltype=False):
@@ -166,7 +176,7 @@ class InitPixelClassifier:
         self.np_array = np_array
         self.prop_array = prop_array
 
-    def init_classify(self, chi, mw0, e):
+    def init_classify(self, led, chi, e):
         '''
         Add False values to 3D numpy array surrounding it.
         shp_x, shp_y, shp_z = np.shape(self.np_array)
@@ -202,7 +212,7 @@ class InitPixelClassifier:
             j[3] = adjacent(i, self.coords_array, loc_arr)[0]
             # j[3] = self.init_adjacent(i, loc_arr)
             j[4] = self.init_modulus(e)
-            j[5] = self.init_molecular_weight(mw0)
+            j[5] = self.init_molecular_weight(led)
         return self.prop_array, loc_arr
 
     def init_crystallinity(self, chi):
@@ -244,20 +254,17 @@ class InitPixelClassifier:
             return 1
         else:
             return 0
-        # for i in loc_arr:
-        #     print(i)
-        #     if np.array_equal(self.coords_array[index], i):
-        #         print(i)
-        #         print(self.prop_array[index])
-        #         return 1
-        #     else:
-        #         return 0
-        # for i, j in enumerate(self.coords_array):
-        #     for k in loc_arr:
-        #         if np.array_equal(j, k) is True:
-        #             return 1
 
-    def init_molecular_weight(self, mw0):
+    def init_molecular_weight(self, led):
+        if led == 0.135:
+            mw0 = np.random.poisson(390000)
+        elif led == 0.097:
+            mw0 = np.random.poisson(460000)
+        elif led == 0.077:
+            mw0 = np.random.poisson(510000)
+        else:
+            print("Unknown LED value.")
+            return
         return mw0
 
     def init_modulus(self, e):
