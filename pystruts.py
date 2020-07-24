@@ -18,7 +18,6 @@ def convert_bool(im):
 def _parse_data(data):
     im = list(data)[0]
     del_list = ['raw_data', 'filter', 'lt']
-    new_data = {}
     for i in del_list:
         del data[im][i]
     psd_data = list(data[im]['psd'])
@@ -30,9 +29,7 @@ def _parse_data(data):
     del data[im]['porosity']
     data[im].pop('psd')
     newlist = list(data[im])[:-2]
-    for i in newlist:
-        new_data[i] = np.ndarray.tolist(data[im][i])
-    return new_data
+    return {i: np.ndarray.tolist(data[im][i]) for i in newlist}
 
 def _parse_lt(data):
     im = list(data)[0]

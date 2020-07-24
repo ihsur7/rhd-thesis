@@ -27,7 +27,9 @@ class ImageImporter:
 
     def import_image(self):
         imdir = pyd.Directory(self.inputdir).InputDIR()
+        print(imdir)
         self.data["raw_data"] = {}
+        print(self.data)
         if self.importall:
             listdir = os.listdir(imdir)
             for i in listdir:
@@ -104,7 +106,7 @@ class AnalyseImage():
                 imresults[(imresults == 0) * imtemp] = r
         return imresults
 
-    def analyse(self, measure="pores"):
+    def analyse(self, measure="material"):
         self.data["local_thickness"] = {}
         self.data["inverted_image"] = {}
         if measure == "pores":
@@ -187,14 +189,15 @@ def saveCSV(output):
 if __name__ == "__main__":
     data = Data().data
     prefs = Data().preferences
-    prefs["input"] = '/data/downsample-2048-man-thres/'
+    prefs["input"] = '/data/downsample-2048-man-thres/nx-4/'
     prefs["log"] = False
-    prefs["layer"] = ['0-lx'] #, '4-lx', '8-lx', '12-lx', '16-lx', '20-lx']
+    prefs["layer"] = ['nx-12'] #, '4-lx', '8-lx', '12-lx', '16-lx', '20-lx']
     prefs["sizes"] = 50
     prefs["bins"] = int(prefs["sizes"] / 2)
-    print(prefs)
-    # print(data)
-    imf = Filters(data, 15, "median").apply_filter()
+    print("Preferences: {}".format(prefs))
+    data = ImageImporter(data, prefs["input"], layer=prefs["layer"][0]).import_image()
+    print(data)
+    imf = Filters(data, 1, "median").apply_filter()
     # print(data)
     lt = AnalyseImage(data, sizes=prefs["sizes"]).analyse()
     # print(data)
@@ -202,16 +205,12 @@ if __name__ == "__main__":
     stats = Statistics(data)
     # stats.GetPorosity()
     stats.pore_distribution(bins=prefs["bins"], log=prefs["log"])
-    rlist = []
-    rlist.append(i for i in data["psd"][prefs["layer"]].R)
-    pdflist = []
-    pdflist.append(i for i in data["psd"][prefs["layer"]].pdf)
-    sumlist = []
-    for i, j in zip(rlist, pdflist):
-        sumlist.append(i * j)
-    print('avg. pore size for {}: {}'.format(prefs["layer"], sum(sumlist)))
+    rlist = [data['psd'][prefs['layer'][0]].R]
+    pdflist = [data['psd'][prefs['layer'][0]].pdf]
+    sumlist = np.sum(np.asarray([i * j for i, j in zip(rlist, pdflist)]))
+    print('Avg. pore size for {}: {}'.format(prefs["layer"][0], sumlist))
 
     # print(data["psd"])
-    # plt.plot(data["psd"]["0-lx"].R, data["psd"]["0-lx"].cdf)
-    # plt.show()
+    plt.plot(data["psd"]["0-lx"].R, data["psd"]["0-lx"].cdf)
+    plt.show()
     # print(data["psd"])
