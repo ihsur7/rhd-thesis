@@ -83,7 +83,7 @@ class Voxelize:
         e.g. matprops_array(self, numprops)
 
         Returns:
-            array -- empty array of the length of coord_array that containsvarious material properties.
+            array -- empty array of the length of coord_array that contains various material properties.
         """
         # Stores properties of points using an array of same length as coord array. 
         # 4 can be changed to a different number depending on what needs to be stored.
@@ -270,6 +270,21 @@ class InitPixelClassifier:
     def init_modulus(self, e):
         e_scalar = rand_scalar(0.9, 1)
         return e * e_scalar
+
+#Fick's Law of Diffusion 
+##Assume 1D initially, infinite source
+##Molarity (concentration): C = m/V * 1/MW
+##m = mass of solute (g), V is volume of solution in (L), MW is molecular weight, C is molar concentration (mol/L)
+
+diff_coeff = {"25": 51.7, "37": 67.6, "50": 165} #x10^(-12) m^2/s
+
+pha_density = 1.240 #kg/m3
+
+pixel_scale = 1 #px/mm
+
+#Assume instant diffusion, use random walk to simulate water diffusion into scaffold
+#Once pixel is saturated with water, random walk takes place onto new adjacent pixel
+
 
 
 scaffold = InitPixelClassifier(coords, nparr, props)
