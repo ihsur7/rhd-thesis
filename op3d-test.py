@@ -14,6 +14,7 @@ import pandas as pd
 from pyntcloud import PyntCloud
 import pyvista as pv
 import PVGeo as pg
+import math
 
 in_dir = "/data/sample1/25/uct/tiff/"  # '/data/sample1/25/model/25.stl' #"/data/sample1/25/uct/tiff/"
 
@@ -277,10 +278,13 @@ class InitPixelClassifier:
 ##m = mass of solute (g), V is volume of solution in (L), MW is molecular weight, C is molar concentration (mol/L)
 
 diff_coeff = {"25": 51.7, "37": 67.6, "50": 165} #x10^(-12) m^2/s
-
 pha_density = 1.240 #kg/m3
+pixel_scale = 1 #mm/px * 1px
+voxel_vol = 1 #mm^3
+voxel_mass = pha_density * voxel_vol
 
-pixel_scale = 1 #px/mm
+#Fick's 2nd Law determines concentration change over time - eq. similar to heat eq
+psi = 1/math.sqrt(4*math.pi*diff*t)
 
 #Assume instant diffusion, use random walk to simulate water diffusion into scaffold
 #Once pixel is saturated with water, random walk takes place onto new adjacent pixel
