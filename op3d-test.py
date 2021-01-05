@@ -284,7 +284,12 @@ voxel_vol = 1 #mm^3
 voxel_mass = pha_density * voxel_vol
 
 #Fick's 2nd Law determines concentration change over time - eq. similar to heat eq
-psi = 1/math.sqrt(4*math.pi*diff*t)
+#x goes from 0 -> 1 going through the length of the voxel
+#iter = time, the function is meant to run each iteration to update the concetration of water in the exposed voxel
+
+
+def Fick(diff, x, t):
+    return (1/(math.sqrt(4*math.pi*diff*t)))*(math.exp(-((x**2)/(4*diff*t))))
 
 #Assume instant diffusion, use random walk to simulate water diffusion into scaffold
 #Once pixel is saturated with water, random walk takes place onto new adjacent pixel
