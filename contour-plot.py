@@ -10,11 +10,12 @@ E_array = np.array([
                     [3.603378009, 3.629423336, 3.800265289, 3.885838633, 3.479162909]
                     ])
 
-print(E_array)
+# print(E_array)
 
-plt.contourf(E_array, alpha=0.5)
-plt.colorbar()
-plt.savefig('contour-test-2.png', cmap='RdBu')
-plt.show()
+# plt.contourf(E_array, alpha=0.5)
+# plt.colorbar()
+# plt.savefig('contour-test-2.png', cmap='RdBu')
+# plt.show()
 
-implot = 
+a = 0
+print(bool(a))

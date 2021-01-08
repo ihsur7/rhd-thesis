@@ -15,6 +15,7 @@ from pyntcloud import PyntCloud
 import pyvista as pv
 import PVGeo as pg
 import math
+import uuid
 
 in_dir = "/data/sample1/25/uct/tiff/"  # '/data/sample1/25/model/25.stl' #"/data/sample1/25/uct/tiff/"
 
@@ -75,8 +76,8 @@ class Voxelize:
 
     def matprops_array(self, numprops):
         """[summary]
-        [pixel state, adjacent, water diffusion, chi, molecular weight, e]
-        [chi, pixel state, lifetime, adjacent, e, molecular weight]
+        [id, nth pixel, pixel state, adjacent, water diffusion, chi, molecular weight, e]
+        #[chi, pixel state, lifetime, adjacent, e, molecular weight]
         diffusion = initially false
         Can make an input to decide how many properties are stored,
         e.g. matprops_array(self, numprops)
@@ -142,7 +143,7 @@ def rand_scalar(min_val, max_val):
 
 a = Voxelize(input_dir)
 coords = a.coord_array()
-props = a.matprops_array(numprops=5)
+props = a.matprops_array(numprops=8)
 nparr = a.np_array()
 
 
@@ -177,7 +178,7 @@ class InitPixelClassifier:
 
     def init_classify(self, led, chi, e):
         '''
-        [pixel state, adjacent, water diffusion, chi, molecular weight, e]
+        [id, nth pixel, pixel state, adjacent, water diffusion, is crystalline, molecular weight, e]
 
         Add False values to 3D numpy array surrounding it.
         shp_x, shp_y, shp_z = np.shape(self.np_array)
@@ -206,16 +207,25 @@ class InitPixelClassifier:
         # prop_array[n][2] = molecular weight
         # prop_array[n][3] = pseudo-elastic modulus
         for i, j in enumerate(self.prop_array):
-            j[0] = self.init_pixel_state()
-            j[1] = adjacent(i, self.coords_array, loc_arr)[0]
-            j[2] = self.init_diffusion()
-            j[3] = self.init_crystallinity(chi)
-            j[4] = self.init_molecular_weight(led)
-            j[5] = self.init_modulus(e)
+            j[0] = self.init_id()
+            j[1] = self.nth_pixel()
+            j[2] = self.init_pixel_state()
+            j[3] = adjacent(i, self.coords_array, loc_arr)[0]
+            j[4] = self.init_diffusion()
+            j[5] = self.init_crystallinity(chi)
+            j[6] = self.init_molecular_weight(led)
+            j[7] = self.init_modulus(e)
             # print(i)
             # j[3] = self.init_adjacent(i, loc_arr)
         return self.prop_array, loc_arr
     
+    def init_id(self):#, index):
+        # return [i for i in self.coords_array[index]]
+        return uuid.uuid4().hex
+    
+    def nth_pixel(self):
+        return 0
+
     def init_diffusion(self):
         return False
 
@@ -223,7 +233,6 @@ class InitPixelClassifier:
         # crystallinity = probability a pixel will be crystalline
         bin_prob = np.random.binomial(1, chi)
         return 1 if bin_prob == 1 else 0
-
 
     def init_pixel_state(self):
         '''
@@ -277,12 +286,22 @@ class InitPixelClassifier:
     
 def update_model():
     i = 0
+    # 1 iteration = 1 second
     max_iter = 100
-    while i <= 100:
+    while i <= max_iter:
         i += 1
-        
+        if bool(coords[3]) == True:
+            # Fick(diff_coeff_mm["37"], )
+            break
     return
 
+def update_path():
+    max_steps = 1e3
+    step_set = [-1, 0, 1]
+    dims = 3
+    while i < max_steps:
+        
+    return
 # print(input_dir)
 # print(output_dir)
 
