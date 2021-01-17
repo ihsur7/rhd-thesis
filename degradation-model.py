@@ -141,12 +141,6 @@ def rand_scalar(min_val, max_val):
     return min_val + (random.random() * (max_val - min_val))
 
 
-a = Voxelize(input_dir)
-coords = a.coord_array()
-props = a.matprops_array(numprops=8)
-nparr = a.np_array()
-
-
 def adjacent(index, coords_array, loc_arr):
     """
     1 = adjacent
@@ -237,6 +231,9 @@ class InitPixelClassifier:
     def init_pixel_state(self):
         '''
         Initially all pixels are on (i.e. state = 1)
+        0 = off/dead
+        1 = on
+        2 = active (only active if neighbouring pixel active, adjacent pixels are active)
         '''
         # crys = self.init_crystallinity(chi)
         # if crys == -1:
@@ -295,13 +292,23 @@ def update_model():
             break
     return
 
-def update_path():
-    max_steps = 1e3
+def random_walk(isactive=True):
     step_set = [-1, 0, 1]
     dims = 3
-    while i < max_steps:
-        
-    return
+    # i = 0
+    while isactive == True:
+        next_step = np.random.choice(a=step_set, size=(1, dims))
+    return next_step
+
+a = Voxelize(input_dir)
+coords = a.coord_array()
+props = a.matprops_array(numprops=8)
+nparr = a.np_array()
+mat_props = InitPixelClassifier(coords, nparr, props)
+
+def iter():
+    if props[3] == True
+    
 # print(input_dir)
 # print(output_dir)
 
