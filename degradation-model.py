@@ -104,7 +104,7 @@ class Voxelize:
         # print(nArray)
         for i in cArray:
             nArray[i[0]][i[1]][i[2]] = True
-        print(np.shape(nArray))
+        # print(np.shape(nArray))
         return nArray
 
 
@@ -201,7 +201,7 @@ class InitPixelClassifier:
         # prop_array[n][2] = molecular weight
         # prop_array[n][3] = pseudo-elastic modulus
         for i, j in enumerate(self.prop_array):
-            j[0] = self.init_id()
+            j[0] = self.init_id(i)
             j[1] = self.nth_pixel()
             j[2] = self.init_pixel_state()
             j[3] = adjacent(i, self.coords_array, loc_arr)[0]
@@ -213,9 +213,11 @@ class InitPixelClassifier:
             # j[3] = self.init_adjacent(i, loc_arr)
         return self.prop_array, loc_arr
     
-    def init_id(self):#, index):
+    def init_id(self, index):#, index):
         # return [i for i in self.coords_array[index]]
-        return uuid.uuid4().hex
+        # for i, j in enumerate(self.prop_array):
+        #     j[0] = i
+        return index
     
     def nth_pixel(self):
         return 0
@@ -292,23 +294,65 @@ def update_model():
             break
     return
 
-def random_walk(isactive=True):
-    step_set = [-1, 0, 1]
+class PathArray:
+    def __init__(self, coords_array, np_array, prop_array):
+        self.coords_array = coords_array
+        self.np_array = np_array
+        self.prop_array = prop_array
+
+    def initPathArray(self):
+        # print(self.prop_array)
+        patharray = np.zeros(shape=(np.count_nonzero(self.prop_array[:,3]), 1), dtype=int)
+        print(np.count_nonzero(self.prop_array[:,3]))
+        print(patharray.shape, self.prop_array.shape)
+        # for x,y in enumerate(patharray):
+        #     for i in self.prop_array:
+        #         if i[3] == 1:
+        #             y = i[0]
+        #             patharray[x] = i[0]
+        counter=0
+        for i in self.prop_array:
+            if i[3] == 1:
+                # print(i)
+                patharray[counter] = i[0]
+                counter+=1
+            # for j in self.prop_array:
+            #     if j[3] == 1:
+            #         i[0] = j[0]
+        # print(patharray)
+        return patharray
+    
+
+def random_walk(pixel_state):
     dims = 3
-    # i = 0
-    while isactive == True:
-        next_step = np.random.choice(a=step_set, size=(1, dims))
-    return next_step
+    if pixel_state != 2:
+        return None
+    step_set = [-1, 0, 1]
+    return np.random.choice(a=step_set, size=(1, dims))
 
 a = Voxelize(input_dir)
 coords = a.coord_array()
 props = a.matprops_array(numprops=8)
 nparr = a.np_array()
-mat_props = InitPixelClassifier(coords, nparr, props)
+mat_props = InitPixelClassifier(coords, nparr, props).init_classify(0.135, 0.67, 3)
+flowpath = PathArray(coords, nparr, mat_props[0]).initPathArray()
 
 def iter():
-    if props[3] == True
-    
+    i = 0
+    max_steps = 2
+    while i < max_steps:
+        for i, j in enumerate(mat_props):
+            if j[3] == 1:
+                next_coord = random_walk(j[2])
+                if next_coord is None:
+                    j[2] == 2
+                else:
+                    next_coord = random_walk(j[2])
+                    
+            
+            # Fick(diff_coeff_mm["37"], i)
+    pass
+
 # print(input_dir)
 # print(output_dir)
 
@@ -334,18 +378,22 @@ water_conc = water_mass/voxel_vol
 #concentration at surface = M_s = saturation mass of water
 #therefore, Fick function determines 
 
-def Fick(diff, x, t):
+def Fick(diff, t, c0 = None, x=1):
     """
     returns C/C0
     C0 = water_conc
+
     """
-    return math.erfc(x/(math.sqrt(4*diff*t)))
+    if c0 is None:
+        return math.erfc(x/(math.sqrt(4*diff*t)))
+    else:
+        return c0*math.erfc(x/(math.sqrt(4*diff*t)))
     # return (1/(math.sqrt(math.pi*diff*t)))*(math.exp(-((x**2)/(4*diff*t))))
 
-#once C/C0 reaches 0.5, random walk takes place (initially model 1D flow, move water concentration to next pixel)
+#once C/C0 reaches 0.5, random walk takes place
 
 
-print(Fick(diff_coeff_mm["37"], 1, 1e30))
+# print(Fick(diff_coeff_mm["37"], 100))
 
 #Mw loss function (units g/mol/day) Mw loss rate: 900 g/mol/day
 #crystallinity (Poisson distribution)
