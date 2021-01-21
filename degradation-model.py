@@ -1,5 +1,5 @@
 import pydirectory as pyd
-import open3d as otd
+# import open3d as otd
 import numpy as np
 # import stl
 import numpy
