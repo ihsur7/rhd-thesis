@@ -16,6 +16,7 @@ import pyvista as pv
 import PVGeo as pg
 import math
 import uuid
+from tqdm import tqdm
 
 in_dir = "/data/sample1/25/uct/tiff/"  # '/data/sample1/25/model/25.stl' #"/data/sample1/25/uct/tiff/"
 
@@ -424,7 +425,9 @@ def iter(coords_array, prop_array, np_array, id_array, path_array, bias = False)
 
     #for each property array row, if voxel is active, run randomwalk
     t = 0
-    max_steps = 10
+    print("t = ", t)
+
+    max_steps = 3
     prob_crys = 0.5
     prob_amorph = 1.5
     prob_self = 0.5
@@ -443,11 +446,12 @@ def iter(coords_array, prop_array, np_array, id_array, path_array, bias = False)
     # print(mat_props)
     # print(path_array)
     # print(coords_dict[0])
-    while t <= max_steps:
+    # for t in tqdm(range(max_steps)):
+    # pbar = tqdm(total=max_steps+1)
+    while t < max_steps:
         path_array = np.c_[path_array, np.zeros(path_array.shape[0])]
-        print("t = ", t)
         it = 0
-        t+=1
+        
         for j in coords_array:
             # print(t)
             # print(path_array.shape)
@@ -589,8 +593,14 @@ def iter(coords_array, prop_array, np_array, id_array, path_array, bias = False)
                 # print(next_id)
                 for path_item in path_array:
                     if path_item[0] == j[0]:
-                        path_item[t] = next_id
+                        path_item[t+1] = next_id
+        t+=1
+        print("t = ", t)
+
+
     print(path_array)
+    print(path_array.shape)
+    # pbar.close()
     return path_array
                 # print(path_array)
                 # print(key_matrix)
