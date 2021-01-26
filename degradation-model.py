@@ -451,7 +451,7 @@ def iter(coords_array, prop_array, np_array, id_array, path_array, bias = False)
     while t < max_steps:
         path_array = np.c_[path_array, np.zeros(path_array.shape[0])]
         it = 0
-        
+        #iterates through coordinate array, instead it should iterate through flowpath array as it needs assign the next coordinate for the path
         for j in coords_array:
             # print(t)
             # print(path_array.shape)
@@ -597,11 +597,12 @@ def iter(coords_array, prop_array, np_array, id_array, path_array, bias = False)
         t+=1
         print("t = ", t)
 
-
     print(path_array)
     print(path_array.shape)
     # pbar.close()
     return path_array
+
+def iter_comments():
                 # print(path_array)
                 # print(key_matrix)
                 # print(prob_matrix)
@@ -670,10 +671,130 @@ def iter(coords_array, prop_array, np_array, id_array, path_array, bias = False)
                 
                     
                     # Fick(diff_coeff_mm["37"], i)
+    # print(input_dir)
+    # print(output_dir)
+    return
 
-# print(input_dir)
-# print(output_dir)
-iter(coords, mat_props, nparr, idarr, flowpath)
+def iter_path(coords_array, prop_array, np_array, id_array, path_array, bias = False):
+    #initialise 3D array shape of np_array with zeros that dynamically changes values
+    #the values are probability numbers 
+
+    #for each property array row, if voxel is active, run randomwalk
+    max_steps = 3
+    prob_crys = 0.5
+    prob_amorph = 1.5
+    prob_self = 0.5
+    # print(coords_array)
+    # print(prop_array[0])
+    coords_dict = {}
+    prop_dict = {}
+    prop_shape = prop_array[0].shape
+    # print(path_array.shape)
+    # print(prop_shape)
+    for i in coords_array:
+        coords_dict[i[0]] = np.array(i[1:4])
+    for j in prop_array[0]:
+        prop_dict[j[0]] = j[1:prop_shape[1]]
+    path_array = np.c_[path_array, np.zeros((path_array.shape[0],max_steps))]
+    print('\n path_array shape = ', path_array.shape)
+
+    for t in tqdm(np.arange(start=0, stop=max_steps+1)):# max_steps+1)):
+        print('\n t = ', t)
+        #iterates through coordinate array, instead it should iterate through flowpath array as it needs assign the next coordinate for the path
+        for j in flowpath:
+            # print(j)
+            # print(j[t])
+            x,y,z = coords_dict[j[t]]
+            print(x,y,z)
+            #gets coordinates of neighbouring voxels
+            neighbour_list = neighbours(x, y, z, res = np_array[1])
+            # print(neighbour_list)
+            id_list = []
+            id_list.append(j[0])
+            for a in neighbour_list:
+                #if pixel is white/polymer
+                x1, y1, z1 = a[0], a[1], a[2]
+                if np_array[0][x1][y1][z1] == 1: #if pixel is white
+                    #get coordinate id
+                    id_list.append(id_array[0][x1][y1][z1]) #np.array([x1, y1, z1])
+                    id_list = [int(i) for i in id_list]
+            #count number of pixels
+            countamorph = [] #list containing id of voxels that are neighbouring to the current voxel and are amorphous
+            countcrys = [] #same as above, except for crystalline
+            #find if voxel is amorphous of crystalline
+            for iid in id_list:
+                if prop_dict[iid][5] == 1:
+                    countcrys.append(iid)
+                # if mat_props[0][iid][5] == 1: #if crystalline
+                    # countcrys.append(iid)
+                else:
+                    countamorph.append(iid)
+            total_count = len(countcrys) + len(countamorph)
+            # print(total_count, len(countamorph), len(countcrys))
+            #create a 3D array with current voxel in the middle that is 3x3 and add neighbouring voxels to this array
+            prob_matrix = np.zeros(shape=(3,3,3), dtype=float)
+            key_matrix = np.zeros(shape=(3,3,3), dtype=int)
+            key_matrix[1,1,1] = id_list[0]
+            # print(prob_matrix)
+            # print(key_matrix)
+            prob_matrix[1,1,1] = prob_self*(1/total_count)
+            center_id = id_list[0]
+            center_coord = coords_dict[center_id]
+            center_coord_x = center_coord[0]
+            center_coord_y = center_coord[1]
+            center_coord_z = center_coord[2]
+            # print(id_list[1:])
+            for i in id_list[1:]:
+                # print(i)
+                xx = coords_dict[i]#coords_array[np.where(coords_array[:,0] == i)]
+                # print(xx)
+                x_x = center_coord_x - xx[0]
+                x_y = center_coord_y - xx[1]
+                x_z = center_coord_z - xx[2]
+                # x_list = [x_x, x_y, x_z]
+                key_matrix[1-x_x, 1-x_y, 1-x_z] = i
+                # if i == center_id:
+                #     prob_matrix[1, 1, 1] = prob_self*(1/total_count)
+                if bias == False:
+                    prob_matrix[1-x_x, 1-x_y, 1-x_z] = (1-(prob_self/total_count))/(total_count-1)
+                        # print(prob_matrix)
+                        # print(key_matrix)
+                else:
+                    if i in countamorph:
+                        # if i == center_id:
+                        #     pass
+                        # else:
+                        if prop_dict[i][5] == 0:
+                            prob_matrix[1-x_x, 1-x_y, 1-x_z] = (((prob_self/total_count))/(total_count-1))*prob_amorph*(len(countamorph)-1)
+                        else:
+                            prob_matrix[1-x_x, 1-x_y, 1-x_z] = (((prob_self/total_count))/(total_count-1))*prob_amorph*(len(countamorph))
+                    elif i in countcrys:
+                        # if i == center_id:
+                        #     pass
+                        # else:
+                        if prop_dict[i][5] == 1:
+                            prob_matrix[1-x_x, 1-x_y, 1-x_z] = ((1-(prob_self/total_count))/(total_count-1)*prob_crys*(len(countcrys)-1))
+                        else:
+                            prob_matrix[1-x_x, 1-x_y, 1-x_z] = ((1-(prob_self/total_count))/(total_count-1)*prob_crys*(len(countcrys)))
+                ## ADD BIAS FOR AMORPHOUS VOXELS
+            # print(prob_matrix)
+            flat_array = np.arange(np.ndarray.flatten(prob_matrix).shape[0])
+            # print(flat_array)
+            choice = np.random.choice(flat_array, p=np.ndarray.flatten(prob_matrix))
+            flat_array = np.reshape(flat_array, (3,3,3))
+            n_p = np.where(flat_array==choice)
+            next_pixel = np.vstack((n_p[0], n_p[1], n_p[2])).transpose()[0]
+            next_id = key_matrix[next_pixel[0]][next_pixel[1]][next_pixel[2]]
+            for path_item in path_array:
+                if path_item[0] == j[0]:
+                    path_item[t+1] = next_id
+
+    print(path_array)
+    print(path_array.shape)
+    # pbar.close()
+    return path_array
+
+iter_path(coords, mat_props, nparr, idarr, flowpath)
 #Fick's Law of Diffusion 
 ##Assume 1D initially, infinite source
 ##Molarity (concentration): C = m/V * 1/MW
