@@ -62,21 +62,40 @@ class Voxelize:
         """[summary]
         
         Returns:
-            array -- that contains the coordinates of the pixels that are white.
+            array -- that contains coordinates of the pixels that are white.
         """
         arr = self.to_numpy()[0]
         coord = np.asarray(np.where(arr))
-        coords = np.empty((len(coord[0]), 3), dtype=np.int64)
+        coords = np.empty((len(coord[0]), 4), dtype=np.int64)
         for i in np.arange(len(coord[0])):
-            coords[i] = coord[:, i]
+            coords[i][0] = i
+            coords[i][1:4] = coord[:, i]
+
+        # print(coords)
         if not self.booltype:
+        # print(self.prop_array.shape)
+            # print(coords.shape)
+            # l = self.prop_array.shape[0]
+            # self.coords_array = np.c_[np.zeros(l), self.coords_array]
             return coords
         else:
             return self.np_array()
+    
+    def vox_id(self):
+        arr1 = self.to_numpy()
+        arr = arr1[0]
+        res = arr1[1]
+        coords = self.coord_array()
+        for i in coords:
+            x,y,z = i[1:4]
+            arr[x,y,z] = i[0]
+            # print(i[1:4])
+            # arr[i[1:4]] == i[0]
+        return arr, res
 
     def matprops_array(self, numprops):
         """[summary]
-        [id, nth pixel, pixel state, adjacent, water diffusion, chi, molecular weight, e]
+        [id, nth pixel, pixel state, adjacent, prob, water diffusion, chi, molecular weight, e]
         #[chi, pixel state, lifetime, adjacent, e, molecular weight]
         diffusion = initially false
         Can make an input to decide how many properties are stored,
@@ -125,13 +144,13 @@ def neighbours(x, y, z, res):
         for j in y_range:  # check if coordinates are negative or larger than image
             for k in z_range:
                 if (
-                        -1 < x <= res[0]
-                        and -1 < y <= res[1]
-                        and -1 < z <= res[2]
+                        -1 < x <= res[0]-1
+                        and -1 < y <= res[1]-1
+                        and -1 < z <= res[2]-1
                         and (x != i or y != j or z != k)
-                        and (0 <= i <= res[0])
-                        and (0 <= j <= res[1])
-                        and (0 <= k <= res[2])
+                        and (0 <= i <= res[0]-1)
+                        and (0 <= j <= res[1]-1)
+                        and (0 <= k <= res[2]-1)
                 ):
                     n_list.append([i, j, k])
     return n_list
@@ -146,7 +165,8 @@ def adjacent(index, coords_array, loc_arr):
     1 = adjacent
     0 = far
     """
-    a = np.where((loc_arr == coords_array[index]).all(axis=1))[0]
+    # print(coords_array[index][0:3])
+    a = np.where((loc_arr == coords_array[index][1:4]).all(axis=1))[0]
     # print('a is ', a)
     if a.size:
         # print('not empty')
@@ -189,9 +209,10 @@ class InitPixelClassifier:
             # print(i)
         '''
 
-        edt = ndimage.distance_transform_edt(self.np_array)
+        edt = ndimage.distance_transform_edt(self.np_array[0])
         loc = np.where(edt == 1)
         loc_arr = np.vstack((loc[0], loc[1], loc[2])).transpose()
+        # print(self.coords_array)
         # self.init_adjacent(loc_arr)
 
         # prop_array[n][0] = x_i,j
@@ -209,6 +230,8 @@ class InitPixelClassifier:
             j[5] = self.init_crystallinity(chi)
             j[6] = self.init_molecular_weight(led)
             j[7] = self.init_modulus(e)
+            # j[4] = self.init_prob(i, self.coords_array, self.np_array, bias = True)
+
             # print(i)
             # j[3] = self.init_adjacent(i, loc_arr)
         return self.prop_array, loc_arr
@@ -217,7 +240,21 @@ class InitPixelClassifier:
         # return [i for i in self.coords_array[index]]
         # for i, j in enumerate(self.prop_array):
         #     j[0] = i
+        # self.coords_array[index][0] = index
         return index
+
+    # def init_prob(self, index, coord_array, np_array, bias = True):
+    #     # adj_array = adjacent(index, self.coords_array, loc_arr)
+    #     if bias == False:
+    #         return 1/27
+    #     else:
+    #         if self.prop_array[index][6] == 0: #if amorphous
+    #             x, y, z = coord_array[index][0], coord_array[index][1], coord_array[index][2]
+    #             neighbour_list = neighbours(x, y, z, res = np.array[1])
+    #             for i in neighbour_list:
+
+    #             return 1/27
+    #         else
     
     def nth_pixel(self):
         return 0
@@ -260,12 +297,14 @@ class InitPixelClassifier:
         0 for not adjacent
         voxels on the edge are not marked adjacent. needs to be fixed.
         '''
-        a = np.where((loc_arr == self.coords_array[index]).all(axis=1))[0]
+        a = np.where((loc_arr == self.coords_array[index][1:3]).all(axis=1))[0]
         if a.size:
             # print('not empty')
             return 1
         else:
             return 0
+        
+
 
     def init_molecular_weight(self, led):
         if led == 0.135:
@@ -300,27 +339,58 @@ class PathArray:
         self.np_array = np_array
         self.prop_array = prop_array
 
+    def init_prob(self, index, coords_array, np_array, bias = True):
+        probarray = np.zeros(shape = (self.prop_array.shape[0], 2))
+        print(probarray)
+        # adj_array = adjacent(index, self.coords_array, loc_arr)
+        if bias == False:
+            return 1/27
+        else:
+            if self.prop_array[index][6] == 0: #if amorphous
+                x, y, z = coords_array[index][0], coords_array[index][1], coords_array[index][2]
+                neighbour_list = neighbours(x, y, z, res = np_array[1])
+                for i in neighbour_list:
+
+                    pass
+                return 1/27
+            else:
+                pass
+
     def initPathArray(self):
+        """
+        Returns:
+            array of (n,1) dimensions containing ID of voxels starting with the first exposed voxel
+        """
         # print(self.prop_array)
-        patharray = np.zeros(shape=(np.count_nonzero(self.prop_array[:,3]), 1), dtype=int)
-        print(np.count_nonzero(self.prop_array[:,3]))
-        print(patharray.shape, self.prop_array.shape)
+        patharray = []#np.zeros(shape=(np.count_nonzero(self.prop_array[:,3]), 1), dtype=int)
+        # print(np.count_nonzero(self.prop_array[:,3]))
+        # print(patharray, self.prop_array.shape)
         # for x,y in enumerate(patharray):
         #     for i in self.prop_array:
         #         if i[3] == 1:
         #             y = i[0]
         #             patharray[x] = i[0]
-        counter=0
+        # print(self.prop_array[:,3])
         for i in self.prop_array:
             if i[3] == 1:
                 # print(i)
-                patharray[counter] = i[0]
-                counter+=1
+                patharray.append(i[0])
+                # counter += 1   
             # for j in self.prop_array:
             #     if j[3] == 1:
             #         i[0] = j[0]
+        print(len(patharray))
+        patharray = np.asarray_chkfinite(patharray)
+        # print(patharray.shape)
+        patharray = patharray.reshape(patharray.shape[0],-1)
+        # print(patharray.shape)
         # print(patharray)
         return patharray
+    
+    def initRandomWalk(self):
+        patharr = self.initPathArray()
+
+        pass
     
 
 def random_walk(pixel_state):
@@ -333,29 +403,267 @@ def random_walk(pixel_state):
 a = Voxelize(input_dir)
 coords = a.coord_array()
 props = a.matprops_array(numprops=8)
-nparr = a.np_array()
+nparr = a.to_numpy()
+idarr = a.vox_id()
 mat_props = InitPixelClassifier(coords, nparr, props).init_classify(0.135, 0.67, 3)
+# print(mat_props[0])
 flowpath = PathArray(coords, nparr, mat_props[0]).initPathArray()
+# print(flowpath)
+# prob_array = np.zeros(shape=nparr[1], dtype=float)
+# print(nparr[1])
+# print(prob_array, prob_array.shape)
+# prob_array = np.zeros(shape=(3,3,3), dtype=float)
+# print(prob_array)
+# print('end', coords)
+def iter(coords_array, prop_array, np_array, id_array, path_array, bias = False):
+    #initialise 3D array shape of np_array with zeros that dynamically changes values
+    #the values are probability numbers 
+    # prob_array = np.zeros(shape=np_array[1], dtype=float)
+    # prob_array = np.zeros(shape=(3,3,3), dtype=float)
+    # print(prob_array)
 
-def iter():
-    i = 0
-    max_steps = 2
-    while i < max_steps:
-        for i, j in enumerate(mat_props):
-            if j[3] == 1:
-                next_coord = random_walk(j[2])
-                if next_coord is None:
-                    j[2] == 2
-                else:
-                    next_coord = random_walk(j[2])
+    #for each property array row, if voxel is active, run randomwalk
+    t = 0
+    max_steps = 10
+    prob_crys = 0.5
+    prob_amorph = 1.5
+    prob_self = 0.5
+    # print(coords_array)
+    # print(prop_array[0])
+    coords_dict = {}
+    prop_dict = {}
+    prop_shape = prop_array[0].shape
+    # print(path_array.shape)
+    # print(prop_shape)
+    for i in coords_array:
+        coords_dict[i[0]] = np.array(i[1:4])
+    for j in prop_array[0]:
+        prop_dict[j[0]] = j[1:prop_shape[1]]
+    # print(prop_dict)
+    # print(mat_props)
+    # print(path_array)
+    # print(coords_dict[0])
+    while t <= max_steps:
+        path_array = np.c_[path_array, np.zeros(path_array.shape[0])]
+        print("t = ", t)
+        it = 0
+        t+=1
+        for j in coords_array:
+            # print(t)
+            # print(path_array.shape)
+            # print(j)
+            #checks if voxel is active, find neighbouring voxels
+            if prop_dict[j[0]][2] == 1:
+                # print(j)
+                it += 1
+            # print(k)
+            # if k[2] == 1: 
+                # print(coords_array)
+                x,y,z = coords_dict[j[0]]
+                # x, y, z = coords_array[j][1], coords_array[j][2], coords_array[j][3]
+                #gets coordinates of neighbouring voxels
+                neighbour_list = neighbours(x, y, z, res = np_array[1])
+                # print(neighbour_list)
+                id_list = []
+                id_list.append(j[0])
+                for a in neighbour_list:
+                    #if pixel is white/polymer
+                    # print(a)
+                    x1, y1, z1 = a[0], a[1], a[2]
+                    # print(np_array[0].shape)
+                    # print(np_array[0][x1][y1][z1])
+                    # print(x1, y1, z1)
+                    if z1 == 56:
+                        print(neighbour_list)
+                        print(a)
+                        print(z1)
+                    # print(np_array[0][:,:,56])
                     
-            
-            # Fick(diff_coeff_mm["37"], i)
-    pass
+                    # print('shape = ', np_array[0].shape)
+                    if np_array[0][x1][y1][z1] == 1: #if pixel is white
+                        #get coordinate id
+                        
+                        id_list.append(id_array[0][x1][y1][z1]) #np.array([x1, y1, z1])
+                        # print(id_list)
+                        id_list = [int(i) for i in id_list]
+                        # loc = np.where((coords_array[:,1:4] == coord).all(axis=1))
+                        # print(loc[0])
+                        # for ii in loc[0]:
+                        #     id_list.append(coords_array[ii,0])
+                        # print("idlist = ",id_list)
+                        # loc = np.where((coords_array[1:3] == np.array(a)).all(axis=1))
+                        #count number of pixels
+                # print('it = ', it)
+                # print('idlist = ', id_list)
+                countamorph = [] #list containing id of voxels that are neighbouring to the current voxel and are amorphous
+                countcrys = [] #same as above, except for crystalline
+                #find if voxel is amorphous of crystalline
+                # print(mat_props[0][1][5])
+                for iid in id_list:
+                    if prop_dict[iid][5] == 1:
+                        countcrys.append(iid)
+                    # if mat_props[0][iid][5] == 1: #if crystalline
+                        # countcrys.append(iid)
+                    else:
+                        countamorph.append(iid)
+                total_count = len(countcrys) + len(countamorph)
+                # print(total_count, len(countamorph), len(countcrys))
+                #create a 3D array with current voxel in the middle that is 3x3 and add neighbouring voxels to this array
+                prob_matrix = np.zeros(shape=(3,3,3), dtype=float)
+                key_matrix = np.zeros(shape=(3,3,3), dtype=int)
+                key_matrix[1,1,1] = id_list[0]
+                # print(prob_matrix)
+                # print(key_matrix)
+                prob_matrix[1,1,1] = prob_self*(1/total_count)
+                center_id = id_list[0]
+                center_coord = coords_dict[center_id]
+                center_coord_x = center_coord[0]
+                center_coord_y = center_coord[1]
+                center_coord_z = center_coord[2]
+                # print(id_list[1:])
+                for i in id_list[1:]:
+                    # print(i)
+                    xx = coords_dict[i]#coords_array[np.where(coords_array[:,0] == i)]
+                    # print(xx)
+                    x_x = center_coord_x - xx[0]
+                    x_y = center_coord_y - xx[1]
+                    x_z = center_coord_z - xx[2]
+                    # x_list = [x_x, x_y, x_z]
+                    key_matrix[1-x_x, 1-x_y, 1-x_z] = i
+                    # if i == center_id:
+                    #     prob_matrix[1, 1, 1] = prob_self*(1/total_count)
+                    if bias == False:
+                        prob_matrix[1-x_x, 1-x_y, 1-x_z] = (1-(prob_self/total_count))/(total_count-1)
+                            # print(prob_matrix)
+                            # print(key_matrix)
+                    else:
+                        if i in countamorph:
+                            # if i == center_id:
+                            #     pass
+                            # else:
+                            if prop_dict[i][5] == 0:
+                                prob_matrix[1-x_x, 1-x_y, 1-x_z] = (((prob_self/total_count))/(total_count-1))*prob_amorph*(len(countamorph)-1)
+                            else:
+                                prob_matrix[1-x_x, 1-x_y, 1-x_z] = (((prob_self/total_count))/(total_count-1))*prob_amorph*(len(countamorph))
+                        elif i in countcrys:
+                            # if i == center_id:
+                            #     pass
+                            # else:
+                            if prop_dict[i][5] == 1:
+                                prob_matrix[1-x_x, 1-x_y, 1-x_z] = ((1-(prob_self/total_count))/(total_count-1)*prob_crys*(len(countcrys)-1))
+                            else:
+                                prob_matrix[1-x_x, 1-x_y, 1-x_z] = ((1-(prob_self/total_count))/(total_count-1)*prob_crys*(len(countcrys)))
+                    
+                    ## ADD BIAS FOR AMORPHOUS VOXELS
+                    # if i in countamorph:
+                    #     if i == center_id:
+                    #         pass
+                    #     else:
+                    #         prob_matrix[1-x_x, 1-x_y, 1-x_z] = (prob_crys*-1*len(countcrys)*0.1 + (1-prob_matrix[1,1,1]))/len(countamorph) # ((1-prob_self*(1/total_count))-(1/(total_count+len(countcrys))))/len(countamorph)#prob_amorph*(1/total_count)
+                    # elif i in countcrys:
+                    #     if i == center_id:
+                    #         pass
+                    #     else:
+                    #         prob_matrix[1-x_x, 1-x_y, 1-x_z] = 0.1#((1-prob_self*(1/total_count))-(1/(total_count+len(countamorph))))/len(countcrys)#/(1-len(countcrys))##prob_crys*(1/total_count)
+                    # else:
+                    #     pass
+                    #choice x, choice y, choice z
+                    # step_array = np.array([-1, 0, 1])
+                    # print(prob_matrix)
+                    # print(prob_matrix[1,1,:])
+                    # choice_x = np.random.choice(step_array, p=prob_matrix[:,1,1])
+                    # choice_y = np.random.choice(step_array, p=prob_matrix[1,:,1])
+                    # choice_z = np.random.choice(step_array, p=prob_matrix[1,1,:])
+                    # print(choice_x,choice_y,choice_z)
+                # print(prob_matrix)
+                flat_array = np.arange(np.ndarray.flatten(prob_matrix).shape[0])
+                # print(flat_array)
+                choice = np.random.choice(flat_array, p=np.ndarray.flatten(prob_matrix))
+                flat_array = np.reshape(flat_array, (3,3,3))
+                n_p = np.where(flat_array==choice)
+                next_pixel = np.vstack((n_p[0], n_p[1], n_p[2])).transpose()[0]
+                # print(next_pixel)
+                # print(key_matrix)
+                next_id = key_matrix[next_pixel[0]][next_pixel[1]][next_pixel[2]]
+                # print(flat_array)
+                # print(next_id)
+                for path_item in path_array:
+                    if path_item[0] == j[0]:
+                        path_item[t] = next_id
+    print(path_array)
+    return path_array
+                # print(path_array)
+                # print(key_matrix)
+                # print(prob_matrix)
+                # print(np.sum(prob_matrix))
+                    
+                    
+                    # for j in (x_x, x_y, x_z):
+                    #     for k in (x, y, z):
+                    #         total_list.append(j+k)
+                    #         total_list.append(j-k)
+                        # prob_matrix[i-j] = 1/total_count
+                        # prob_matrx[i+j] = 1/total_count
+                # print(total_list)
+        # print(mat_props)
+        # for key, value in prop_dict.items():
+        # for key in sorted(prop_dict.keys()):
+        #     # print(prop_dict[key])
+        #     # print(j)
+        #     # print(key)
+        #     if prop_dict[key][2] == 1:
+        #         print(key, prop_dict[key], coords_dict[key])
+        #         x,y,z = coords_dict[key]
+        #         print(x,y,z)
+        #         neighbour_list = neighbours(x,y,z, res=np_array[1])
+        #         # print(neighbour_list)
+        #         id_list = []
+        #         for a in neighbour_list:
+        #             x1, y1, z1 = a
+        #             print(x1, y1, z1)
+        #             if np_array[0][x1, y1, z1] == 1:
+        #                 for key1, value1 in sorted(coords_dict.items()):
+        #                     # print('value = ', value1)
+        #                     if np.all(value1 == [x1, y1, z1]):
+        #                         id_list.append(key1)
+        #         print(id_list)
+        #         #     pass
+        # t += 1
+        
+ 
+
+        # t+=1
+                    # print(x_x, x_y, x_z)
+                    # prob_matrix[]
+                    # if (x_x < x and x_y < y and x_z < z):
+                    #     prob_matrix[]
+
+                #get id
+                # print("probmatrix", prob_matrix)
+
+
+                        
+                        # for index in coords_array:
+                        #     if a == coords_array[index][1:3]).all(axis=1))[0]
+                        # countamorph.append(a)
+                        # for b, c in enumerate(prop_array):
+                        #     if c[5] == 1:
+                        #         pass
+                        # countcrys.append()                    
+                                    #match them with coordinates and find out of they are crystalline
+
+                # next_coord = random_walk(k[2])
+                # if next_coord is None:
+                #     k[2] == 2
+                # else:
+                #     next_coord = random_walk(j[2])
+                
+                    
+                    # Fick(diff_coeff_mm["37"], i)
 
 # print(input_dir)
 # print(output_dir)
-
+iter(coords, mat_props, nparr, idarr, flowpath)
 #Fick's Law of Diffusion 
 ##Assume 1D initially, infinite source
 ##Molarity (concentration): C = m/V * 1/MW
@@ -389,6 +697,13 @@ def Fick(diff, t, c0 = None, x=1):
     else:
         return c0*math.erfc(x/(math.sqrt(4*diff*t)))
     # return (1/(math.sqrt(math.pi*diff*t)))*(math.exp(-((x**2)/(4*diff*t))))
+
+def MolecularWeight(mw0, lmda, t):
+    return mw0*math.exp(-lmda*t)
+
+def Modulus(n):
+    k_b = 1.38064852e-23 #m^2 kg s^-2 K^-1
+    return 3*n*k_b*310.15
 
 #once C/C0 reaches 0.5, random walk takes place
 
