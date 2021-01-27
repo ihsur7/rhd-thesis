@@ -704,7 +704,7 @@ def iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_arra
         # print(path_array[0])
         # print(path_array[0][t])
         #iterates through coordinate array, instead it should iterate through flowpath array as it needs assign the next coordinate for the path
-        for j in path_array:
+        for j in path_array[0:1]:
             # print(j)
             # print(j[t])
             x,y,z = coords_dict[j[t-1]]
@@ -821,19 +821,23 @@ def iter_fick(max_steps, temp, pixel_scale, coords_array, prop_array, np_array, 
     path = iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_array, bias = False)
     # for t in tqdm(np.arange(1, max_steps+1)):
     t=max_steps
-    for i in path:
+    for i in path[0:1]:
         for j,k in enumerate(i):
-            diff_list = np.zeros(n)
-            conc_list = np.zeros(n-1)
-            for x in np.arange(0, n):
-                diff_list[x] = Fick(diff_coeff_mm["37"], t, c0=water_conc, x=(j+1/n))
-            for index, x in enumerate(conc_list):
-                x = (diff_list[index]+diff_list[index+1])/2
-            total_conc = sum(i*1/n for i in conc_list)
-            prop_dict[k][4] = total_conc
-            # total_conc = np.sum([lambda i: i*(1/n) for i in conc_list])
+            avg_conc = Fick(diff_coeff_mm["37"], t, c0=water_conc, x=j)+Fick(diff_coeff_mm["37"], t, c0=water_conc, x=(j+1))
+            # print(avg_conc)
+            prop_dict[k][4] += avg_conc
+            # diff_list = np.zeros(n)
+            # conc_list = np.zeros(n-1)
+            # for x in np.arange(0, n):
+            #     diff_list[x] = Fick(diff_coeff_mm["37"], t, c0=water_conc, x=(j+1/n))
+            # for index, x in enumerate(conc_list):
+            #     x = (diff_list[index]+diff_list[index+1])/2
+            # total_conc = sum(i*1/n for i in conc_list)
             # print(total_conc)
-    print(prop_dict[path[0][0]])
+            # prop_dict[k][4] += total_conc
+            # # total_conc = np.sum([lambda i: i*(1/n) for i in conc_list])
+            # # print(total_conc)
+    print(prop_dict[path[0][0]][4])
     return
 
 diff_coeff = {"25": 51.7e-12, "37": 67.6e-12, "50": 165e-12} #x10^(-12) m^2/s
