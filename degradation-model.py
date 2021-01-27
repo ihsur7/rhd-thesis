@@ -1,3 +1,4 @@
+from sys import path
 import pydirectory as pyd
 # import open3d as otd
 import numpy as np
@@ -195,7 +196,7 @@ class InitPixelClassifier:
 
     def init_classify(self, led, chi, e):
         '''
-        [id, nth pixel, pixel state, adjacent, water concentration, is crystalline, molecular weight, e]
+        [id, is_pathed?, pixel state, adjacent, water concentration, is crystalline, molecular weight, e]
 
         Add False values to 3D numpy array surrounding it.
         shp_x, shp_y, shp_z = np.shape(self.np_array)
@@ -226,7 +227,7 @@ class InitPixelClassifier:
         # prop_array[n][3] = pseudo-elastic modulus
         for i, j in enumerate(self.prop_array):
             j[0] = self.init_id(i)
-            j[1] = self.nth_pixel()
+            j[1] = self.init_ispathed()
             j[2] = self.init_pixel_state()
             j[3] = adjacent(i, self.coords_array, loc_arr)[0]
             j[4] = self.init_diffusion()
@@ -259,7 +260,7 @@ class InitPixelClassifier:
     #             return 1/27
     #         else
     
-    def nth_pixel(self):
+    def init_ispathed(self):
         return 0
 
     def init_diffusion(self):
@@ -378,6 +379,7 @@ class PathArray:
             if i[3] == 1:
                 # print(i)
                 patharray.append(i[0])
+                i[1] = 1
                 # counter += 1   
             # for j in self.prop_array:
             #     if j[3] == 1:
@@ -704,10 +706,14 @@ def iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_arra
         # print(path_array[0])
         # print(path_array[0][t])
         #iterates through coordinate array, instead it should iterate through flowpath array as it needs assign the next coordinate for the path
-        for j in path_array[0:1]:
+        for j in path_array:
+            if np.all(prop_array[0][:,1]):
+                print('all elements pathed')
+                break
             # print(j)
             # print(j[t])
             x,y,z = coords_dict[j[t-1]]
+
             # print(x,y,z)
             #gets coordinates of neighbouring voxels
             neighbour_list = neighbours(x, y, z, res = np_array[1])
@@ -791,8 +797,22 @@ def iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_arra
             # print('t+1 = ', t+1)
             # print(j)
             j[t] = next_id
+            prop_dict[j[t]][1] = 1
+            # print(prop_array[0][:,0])
+            # path_id = np.where(prop_array[0][:,0] == j[t])[0]
+            # print(j[t])
+            prop_array[0][int(j[t])][1] = 1
+            # print(path_id)
+            # print(prop_dict[j[t]][1])
+            # print(j[t])
+            # print(prop_array[0][path_id][0][1])
+            # prop_array[0][path_id][1] = 1#prop_dict[j[t]][1]
+    # print(prop_array[0][0])
+            # prop_array[0][prop_array[0][np.where(prop_array[0][:,0] == j[t])][0]] = 
+    # print(path_array[0])
     # print(path_array)
     # print(path_array.shape)
+    # np.save(output_dir+'patharray.npy', path_array)
     return path_array
 
 def Fick(diff, t, c0 = None, x=1):
@@ -845,7 +865,8 @@ diff_coeff_mm = {"25": 51.7e-5, "37": 67.6e-5, "50": 165e-5} #mm^2/s
 # print(diff_coeff_mm)
 pixel_scale = 1 #mm/px * 1px
 temp = '37'
-iter_fick(300, temp, pixel_scale, coords, mat_props, nparr, idarr, flowpath)
+# iter_fick(300, temp, pixel_scale, coords, mat_props, nparr, idarr, flowpath)
+iter_path(100, coords, mat_props, nparr, idarr, flowpath)
 #Fick's Law of Diffusion 
 ##Assume 1D initially, infinite source
 ##Molarity (concentration): C = m/V * 1/MW
