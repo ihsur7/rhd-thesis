@@ -18,6 +18,8 @@ import math
 import uuid
 from tqdm import tqdm
 
+print('numpy version = ', np.__version__)
+
 in_dir = "/data/sample1/25/uct/tiff/"  # '/data/sample1/25/model/25.stl' #"/data/sample1/25/uct/tiff/"
 
 out_dir = "/data/deg_test_output/"
@@ -698,19 +700,21 @@ def iter_path(coords_array, prop_array, np_array, id_array, path_array, bias = F
     path_array = np.c_[path_array, np.zeros((path_array.shape[0],max_steps))]
     print('\n path_array shape = ', path_array.shape)
 
-    for t in tqdm(np.arange(start=0, stop=max_steps+1)):# max_steps+1)):
+    for t in tqdm(np.arange(start=1, stop=max_steps+1)):# max_steps+1)):
         print('\n t = ', t)
+        print(path_array[0])
+        print(path_array[0][t])
         #iterates through coordinate array, instead it should iterate through flowpath array as it needs assign the next coordinate for the path
-        for j in flowpath:
+        for j in path_array:
             # print(j)
             # print(j[t])
-            x,y,z = coords_dict[j[t]]
-            print(x,y,z)
+            x,y,z = coords_dict[j[t-1]]
+            # print(x,y,z)
             #gets coordinates of neighbouring voxels
             neighbour_list = neighbours(x, y, z, res = np_array[1])
             # print(neighbour_list)
             id_list = []
-            id_list.append(j[0])
+            id_list.append(j[t-1])
             for a in neighbour_list:
                 #if pixel is white/polymer
                 x1, y1, z1 = a[0], a[1], a[2]
@@ -785,13 +789,13 @@ def iter_path(coords_array, prop_array, np_array, id_array, path_array, bias = F
             n_p = np.where(flat_array==choice)
             next_pixel = np.vstack((n_p[0], n_p[1], n_p[2])).transpose()[0]
             next_id = key_matrix[next_pixel[0]][next_pixel[1]][next_pixel[2]]
-            for path_item in path_array:
-                if path_item[0] == j[0]:
-                    path_item[t+1] = next_id
+            # print('t+1 = ', t+1)
+            # print(j)
+            j[t] = next_id
 
     print(path_array)
     print(path_array.shape)
-    # pbar.close()
+
     return path_array
 
 iter_path(coords, mat_props, nparr, idarr, flowpath)
