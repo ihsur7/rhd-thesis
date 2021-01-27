@@ -382,7 +382,7 @@ class PathArray:
             # for j in self.prop_array:
             #     if j[3] == 1:
             #         i[0] = j[0]
-        print(len(patharray))
+        # print(len(patharray))
         patharray = np.asarray_chkfinite(patharray)
         # print(patharray.shape)
         patharray = patharray.reshape(patharray.shape[0],-1)
@@ -677,12 +677,11 @@ def iter_comments():
     # print(output_dir)
     return
 
-def iter_path(coords_array, prop_array, np_array, id_array, path_array, bias = False):
+def iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_array, bias = False):
     #initialise 3D array shape of np_array with zeros that dynamically changes values
     #the values are probability numbers 
 
     #for each property array row, if voxel is active, run randomwalk
-    max_steps = 3
     prob_crys = 0.5
     prob_amorph = 1.5
     prob_self = 0.5
@@ -698,12 +697,12 @@ def iter_path(coords_array, prop_array, np_array, id_array, path_array, bias = F
     for j in prop_array[0]:
         prop_dict[j[0]] = j[1:prop_shape[1]]
     path_array = np.c_[path_array, np.zeros((path_array.shape[0],max_steps))]
-    print('\n path_array shape = ', path_array.shape)
+    # print('\n path_array shape = ', path_array.shape)
 
     for t in tqdm(np.arange(start=1, stop=max_steps+1)):# max_steps+1)):
-        print('\n t = ', t)
-        print(path_array[0])
-        print(path_array[0][t])
+        # print('\n t = ', t)
+        # print(path_array[0])
+        # print(path_array[0][t])
         #iterates through coordinate array, instead it should iterate through flowpath array as it needs assign the next coordinate for the path
         for j in path_array:
             # print(j)
@@ -792,34 +791,9 @@ def iter_path(coords_array, prop_array, np_array, id_array, path_array, bias = F
             # print('t+1 = ', t+1)
             # print(j)
             j[t] = next_id
-
-    print(path_array)
-    print(path_array.shape)
-
+    # print(path_array)
+    # print(path_array.shape)
     return path_array
-
-iter_path(coords, mat_props, nparr, idarr, flowpath)
-#Fick's Law of Diffusion 
-##Assume 1D initially, infinite source
-##Molarity (concentration): C = m/V * 1/MW
-##m = mass of solute (g), V is volume of solution in (L), MW is molecular weight, C is molar concentration (mol/L)
-
-diff_coeff = {"25": 51.7e-12, "37": 67.6e-12, "50": 165e-12} #x10^(-12) m^2/s
-diff_coeff_mm = {"37": 67.6e-5} #mm^2/s
-# print(diff_coeff_mm)
-pha_density = 1.240 * (1/1000**2) #g/m3
-pixel_scale = 1 #mm/px * 1px
-voxel_vol = 1 #mm^3
-voxel_mass = pha_density * voxel_vol
-water_mass = voxel_mass * 0.00984
-water_conc = water_mass/voxel_vol
-
-#Fick's 2nd Law determines concentration change over time - eq. similar to heat eq
-#x goes from 0 -> 1 going through the length of the voxel
-#iter = time, the function is meant to run each iteration to update the concetration of water in the exposed voxel
-#conecntration units: mol/mm^3
-#concentration at surface = M_s = saturation mass of water
-#therefore, Fick function determines 
 
 def Fick(diff, t, c0 = None, x=1):
     """
@@ -831,6 +805,57 @@ def Fick(diff, t, c0 = None, x=1):
         return math.erfc(x/(math.sqrt(4*diff*t)))
     else:
         return c0*math.erfc(x/(math.sqrt(4*diff*t)))
+
+def iter_fick(max_steps, temp, pixel_scale, coords_array, prop_array, np_array, id_array, path_array, bias = False):
+    pha_density = 1.240 * (1/1000**2) #g/m3
+    diff_coeff_mm = {"25": 51.7e-5, "37": 67.6e-5, "50": 165e-5} #mm^2/s
+    diff = diff_coeff_mm[temp]
+    prop_shape = prop_array[0].shape
+    voxel_vol = pixel_scale**3 #mm^3
+    voxel_mass = pha_density * voxel_vol
+    water_mass = voxel_mass * 0.00984
+    water_conc = water_mass/voxel_vol
+    n = 10
+    coords_dict = {i[0]: np.array(i[1:4]) for i in coords_array}
+    prop_dict = {j[0]: j[1:prop_shape[1]] for j in prop_array[0]}
+    path = iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_array, bias = False)
+    for t in tqdm(np.arange(1, max_steps+1)):
+        for i in path:
+            for j,k in enumerate(i):
+                diff_list = np.zeros(n)
+                conc_list = np.zeros(n-1)
+                for x in np.arange(0, n):
+                    diff_list[x] = Fick(diff_coeff_mm["37"], t, c0=water_conc, x=(j+1/n))
+                for index, x in enumerate(conc_list):
+                    x = (diff_list[index]+diff_list[index+1])/2
+                total_conc = sum(i*1/n for i in conc_list)
+                prop_dict[k][4] = total_conc
+                # total_conc = np.sum([lambda i: i*(1/n) for i in conc_list])
+                # print(total_conc)
+    print(prop_dict[path[0][0]])
+    return
+
+diff_coeff = {"25": 51.7e-12, "37": 67.6e-12, "50": 165e-12} #x10^(-12) m^2/s
+diff_coeff_mm = {"25": 51.7e-5, "37": 67.6e-5, "50": 165e-5} #mm^2/s
+# print(diff_coeff_mm)
+pixel_scale = 1 #mm/px * 1px
+temp = '37'
+iter_fick(300, temp, pixel_scale, coords, mat_props, nparr, idarr, flowpath)
+#Fick's Law of Diffusion 
+##Assume 1D initially, infinite source
+##Molarity (concentration): C = m/V * 1/MW
+##m = mass of solute (g), V is volume of solution in (L), MW is molecular weight, C is molar concentration (mol/L)
+
+
+
+#Fick's 2nd Law determines concentration change over time - eq. similar to heat eq
+#x goes from 0 -> 1 going through the length of the voxel
+#iter = time, the function is meant to run each iteration to update the concetration of water in the exposed voxel
+#conecntration units: mol/mm^3
+#concentration at surface = M_s = saturation mass of water
+#therefore, Fick function determines 
+
+
     # return (1/(math.sqrt(math.pi*diff*t)))*(math.exp(-((x**2)/(4*diff*t))))
 
 def MolecularWeight(mw0, lmda, t):
