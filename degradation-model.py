@@ -195,7 +195,7 @@ class InitPixelClassifier:
 
     def init_classify(self, led, chi, e):
         '''
-        [id, nth pixel, pixel state, adjacent, water diffusion, is crystalline, molecular weight, e]
+        [id, nth pixel, pixel state, adjacent, water concentration, is crystalline, molecular weight, e]
 
         Add False values to 3D numpy array surrounding it.
         shp_x, shp_y, shp_z = np.shape(self.np_array)
@@ -263,7 +263,7 @@ class InitPixelClassifier:
         return 0
 
     def init_diffusion(self):
-        return False
+        return 0.0
 
     def init_crystallinity(self, chi):
         # crystallinity = probability a pixel will be crystalline
@@ -819,19 +819,20 @@ def iter_fick(max_steps, temp, pixel_scale, coords_array, prop_array, np_array, 
     coords_dict = {i[0]: np.array(i[1:4]) for i in coords_array}
     prop_dict = {j[0]: j[1:prop_shape[1]] for j in prop_array[0]}
     path = iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_array, bias = False)
-    for t in tqdm(np.arange(1, max_steps+1)):
-        for i in path:
-            for j,k in enumerate(i):
-                diff_list = np.zeros(n)
-                conc_list = np.zeros(n-1)
-                for x in np.arange(0, n):
-                    diff_list[x] = Fick(diff_coeff_mm["37"], t, c0=water_conc, x=(j+1/n))
-                for index, x in enumerate(conc_list):
-                    x = (diff_list[index]+diff_list[index+1])/2
-                total_conc = sum(i*1/n for i in conc_list)
-                prop_dict[k][4] = total_conc
-                # total_conc = np.sum([lambda i: i*(1/n) for i in conc_list])
-                # print(total_conc)
+    # for t in tqdm(np.arange(1, max_steps+1)):
+    t=max_steps
+    for i in path:
+        for j,k in enumerate(i):
+            diff_list = np.zeros(n)
+            conc_list = np.zeros(n-1)
+            for x in np.arange(0, n):
+                diff_list[x] = Fick(diff_coeff_mm["37"], t, c0=water_conc, x=(j+1/n))
+            for index, x in enumerate(conc_list):
+                x = (diff_list[index]+diff_list[index+1])/2
+            total_conc = sum(i*1/n for i in conc_list)
+            prop_dict[k][4] = total_conc
+            # total_conc = np.sum([lambda i: i*(1/n) for i in conc_list])
+            # print(total_conc)
     print(prop_dict[path[0][0]])
     return
 
@@ -866,9 +867,16 @@ def Modulus(n):
     return 3*n*k_b*310.15
 
 #once C/C0 reaches 0.5, random walk takes place
+# pha_density = 1.240 * (1/1000**2) #g/m3
+# diff_coeff_mm = {"25": 51.7e-5, "37": 67.6e-5, "50": 165e-5} #mm^2/s
+# diff = diff_coeff_mm['37']
+# pixel_scale=1
+# voxel_vol = pixel_scale**3 #mm^3
+# voxel_mass = pha_density * voxel_vol
+# water_mass = voxel_mass * 0.00984
+# water_conc = water_mass/voxel_vol
 
-
-# print(Fick(diff_coeff_mm["37"], 100))
+# print(Fick(diff_coeff_mm["37"], 30, c0 = water_conc))
 
 #Mw loss function (units g/mol/day) Mw loss rate: 900 g/mol/day
 #crystallinity (Poisson distribution)
