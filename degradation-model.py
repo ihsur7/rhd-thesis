@@ -687,10 +687,9 @@ def iter_comments():
     # print(output_dir)
     return
 
-def iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_array, bias = False):
+def iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_array, bias = True):
     #initialise 3D array shape of np_array with zeros that dynamically changes values
     #the values are probability numbers 
-
     #for each property array row, if voxel is active, run randomwalk
     prob_crys = 0.5
     prob_amorph = 1.5
@@ -762,7 +761,6 @@ def iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_arra
                 center_coord_x = center_coord[0]
                 center_coord_y = center_coord[1]
                 center_coord_z = center_coord[2]
-                # print(id_list[1:])
                 for i in id_list[1:]:
                     xx = coords_dict[i]
                     x_x = center_coord_x - xx[0]
@@ -808,6 +806,10 @@ def Fick(diff, t, c0 = None, x=1):
         return math.erfc(x/(math.sqrt(4*diff*t)))
     else:
         return c0*math.erfc(x/(math.sqrt(4*diff*t)))
+
+
+time_array = np.arange(start=0, stop=22, step=2)
+print(time_array)
 
 def iter_fick(max_steps, temp, pixel_scale, coords_array, prop_array, np_array, id_array, path_array, bias = False):
     pha_density = 1.240 * (1/1000**2) #g/m3
