@@ -18,6 +18,7 @@ import PVGeo as pg
 import math
 import uuid
 from tqdm import tqdm
+from collections import Counter
 
 print('numpy version = ', np.__version__)
 
@@ -696,7 +697,7 @@ def iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_arra
     #POTENTIALLY ADD PATH SPLIT, use two random number generators between 0 and 1
     #first one tells which path splits
     #second one tells where it splits
-    prob_self = 0.01
+    prob_self = 0.001
     pm_p = 0.1
     coords_dict = {}
     prop_dict = {}
@@ -794,7 +795,13 @@ def iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_arra
     else:
         print('All voxels pathed.')
         print('Steps required: ', steps)
-    return path_array
+    # for i in dist_array:
+    #     dupe_list = [k for k,v in Counter(i).items() if v>1]
+
+    # print(dupe_list)
+    np.save(output_dir+'path_array', np.asarray_chkfinite((path_array, prop_array, prop_dict, coords_dict)), allow_pickle=True)
+    # np.save(output_dir+'prop_array', prop_array)
+    return path_array, prop_array, prop_dict, coords_dict
 
 def Fick(diff, t, c0 = None, x=1):
     """
@@ -807,8 +814,15 @@ def Fick(diff, t, c0 = None, x=1):
     else:
         return c0*math.erfc(x/(math.sqrt(4*diff*t)))
 
+def grad_calc(loss_rate, c, c0, type='linear'):
+    return loss_rate/(c/c0)
 
-time_array = np.arange(start=0, stop=22, step=2)
+def MwLoss(mw0, c, c0, avg_loss_rate, t):
+    grad1 = grad_calc(avg_loss_rate, c, c0)
+    loss_rate = grad1*avg_loss_rate
+    return mw0*math.e**(-loss_rate*t)
+
+time_array = np.arange(start=2, stop=22, step=2)
 print(time_array)
 
 def iter_fick(max_steps, temp, pixel_scale, coords_array, prop_array, np_array, id_array, path_array, bias = False):
@@ -851,7 +865,85 @@ diff_coeff_mm = {"25": 51.7e-5, "37": 67.6e-5, "50": 165e-5} #mm^2/s
 pixel_scale = 1 #mm/px * 1px
 temp = '37'
 # iter_fick(300, temp, pixel_scale, coords, mat_props, nparr, idarr, flowpath)
-iter_path(2, coords, mat_props, nparr, idarr, flowpath, bias=True)
+# path = iter_path(2, coords, mat_props, nparr, idarr, flowpath, bias=True)
+path = np.load(output_dir+'path_array.npy',allow_pickle=True)
+# print(path)
+def MwLossData(temp, path):
+    loss_rate = [0.0007610, 0.0008171, 0.001194]
+    average_loss_rate = np.average(loss_rate)
+    print("Avg. Loss Rate: ", average_loss_rate)
+    pha_density = 1.240 * (1/1000**2) #g/m3
+    diff_coeff_mm = {"25": 51.7e-5, "37": 67.6e-5, "50": 165e-5} #mm^2/s
+    diff = diff_coeff_mm[temp]
+    voxel_vol = pixel_scale**3 #mm^3
+    voxel_mass = pha_density * voxel_vol
+    water_mass = voxel_mass * 0.00984
+    mw_water = 18.01528 #g/mol
+    mw_pbs = 411.04 #g/mol
+    water_conc = (water_mass/voxel_vol)*(1/mw_water)
+    print("C0: ", water_conc)
+    # print(path[1])
+    data_array = [i[0] for i in path[1][0]]
+    data_array = np.asarray_chkfinite(data_array)
+    data_array = data_array.reshape(data_array.shape[0],-1)
+    # data_array = np.empty(shape=(path[1][0].shape[0],len(time_array+1)))
+    # data_dict = {i: [path[2][i][5]] for i in path[2]}
+    # data_dict = {j[0]: j[5] for j in path[2][j]}
+    # print(data_dict)
+    data_array = np.c_[data_array, np.zeros(shape=(data_array.shape[0], len(time_array)+1))]
+    for i in data_array:
+        if i[0] == 123:
+            print('123: ', i)
+        i[1] = path[2][i[0]][5]
+    data_dict = {i[0]: i[1:] for i in data_array}
+    # print(path[1][0][123], path[2][123])
+    # print(data_dict)
+    # print(data_dict[123])
+    # print(data_array.shape, path[1][0].shape)    
+    for j in path[0]:
+        for k,l in enumerate(j):
+            # for m, n in enumerate(time_array):
+                # t = n*604800
+
+                # data_dict[l][m+1] = 
+            for i,x in enumerate(time_array):
+                t = x*604800
+                avg_conc = Fick(diff_coeff_mm["37"], t, c0=water_conc, x=k)+Fick(diff_coeff_mm["37"], t, c0=water_conc, x=(k+1))
+                # print(avg_conc)
+                # print('conc: ', path[2][l])
+                path[2][l][3] += avg_conc #dictionary
+                path[1][0][k][4] += avg_conc #array
+                mwt = MwLoss(path[2][l][5], avg_conc, water_conc, average_loss_rate, t)
+                data_dict[l][i+1] = mwt
+                # data_dict[l].append(mwt)
+                # if l == 123:
+                    # print(data_dict[123])
+    # for i in tqdm(time_array):
+    #     t = i*604800
+    #     print('timepoint: ', i)
+    #     # print('\ndictionary: ', path[2][0])
+    #     # print('\narray: ', path[1][0][0])
+    #     for j in path[0]:
+    #         for k,l in enumerate(j):
+    #             avg_conc = Fick(diff_coeff_mm["37"], t, c0=water_conc, x=k)+Fick(diff_coeff_mm["37"], t, c0=water_conc, x=(k+1))
+    #             # print(avg_conc)
+    #             # print('conc: ', path[2][l])
+    #             path[2][l][3] += avg_conc #dictionary
+    #             path[1][0][k][4] += avg_conc #array
+    #             mwt = MwLoss(path[2][l][5], avg_conc, water_conc, average_loss_rate, t)
+    #             data_dict[l].append(mwt)
+    #             if l == 123:
+    #                 print(data_dict[123])
+    #             # path[2][l][5] = mwt
+    #             # path[1][0][k][6] = mwt
+    #             # Fick(diff, i*604800, c0=water_conc, x=path[2])
+    # # print(data_dict[123])
+    print(len(data_dict[123]), len(time_array))
+    print(data_dict[123])
+    return path
+
+mw_data = MwLossData("37", path)
+
 #Fick's Law of Diffusion 
 ##Assume 1D initially, infinite source
 ##Molarity (concentration): C = m/V * 1/MW
