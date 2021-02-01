@@ -521,30 +521,6 @@ def iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_arra
     # np.save(output_dir+'prop_array', prop_array)
     return path_array, prop_array, prop_dict, coords_dict
 
-def Fick(diff, t, c0 = None, x=1):
-    """
-    returns C/C0
-    C0 = water_conc
-
-    """
-    if c0 is not None:
-        return c0*math.erfc(x/(math.sqrt(4*diff*t)))
-
-    conc_ratio = math.erfc(x/(math.sqrt(4*diff*t)))
-    if conc_ratio < 1:
-        return conc_ratio
-    else:
-        return 1
-
-def grad_calc(loss_rate, conc_ratio, type='linear'):
-    return loss_rate/(conc_ratio)
-
-def MwLoss(mw0, c, c0, avg_loss_rate, t):
-    # print(c/c0)
-    grad1 = grad_calc(avg_loss_rate, conc_ratio=c/c0)
-    loss_rate = grad1*avg_loss_rate
-    return mw0*math.e**(-loss_rate*t)
-
 def iter_fick(max_steps, temp, pixel_scale, coords_array, prop_array, np_array, id_array, path_array, bias = False):
     pha_density = 1.240 * (1/1000**2) #g/m3
     diff_coeff_mm = {"25": 51.7e-5, "37": 67.6e-5, "50": 165e-5} #mm^2/s
@@ -579,11 +555,38 @@ def iter_fick(max_steps, temp, pixel_scale, coords_array, prop_array, np_array, 
     print(prop_dict[path[0][0]][4])
     return
 
+def Fick(diff, t, c0 = None, x=1):
+    """
+    returns C/C0
+    C0 = water_conc
+
+    """
+    if c0 is not None:
+        return c0*math.erfc(x/(math.sqrt(4*diff*t)))
+
+    conc_ratio = math.erfc(x/(math.sqrt(4*diff*t)))
+    if conc_ratio < 1:
+        return conc_ratio
+    else:
+        return 1
+
+def grad_calc(loss_rate, conc_ratio, type='linear'):
+    if conc_ratio == 0:
+        return 0
+    else:
+        return loss_rate/(conc_ratio)
+
+def MwLoss(mw0, c, c0, avg_loss_rate, t):
+    # print(c/c0)
+    grad1 = grad_calc(avg_loss_rate, conc_ratio=c/c0)
+    loss_rate = grad1*avg_loss_rate
+    return mw0*math.e**(-loss_rate*t)
 
 def MwLossData(temp, path, time_array):
-    # loss_rate= [0.001776, 0.002112, 0.002527] #ln, too high, may need to be in seconds
+    # loss_rate= [0.001776, 0.002112, 0.002527] #ln, in weeks too high, may need to be in seconds
     loss_rate = [2.93651e-9, 3.49206e-9, 4.17824e-9] #ln, in seconds
     # loss_rate = [0.0007610, 0.0008171, 0.001194]
+    # loss_rate = [0.0002538, 0.0003017, 0.0003611] #ln, in days    
     average_loss_rate = np.average(loss_rate)
     print("Avg. Loss Rate: ", average_loss_rate)
     pha_density = 0.00124 #g/mm3 #1.240 * (1/1000**2) #g/m3
@@ -604,41 +607,73 @@ def MwLossData(temp, path, time_array):
     # data_dict = {i: [path[2][i][5]] for i in path[2]}
     # data_dict = {j[0]: j[5] for j in path[2][j]}
     # print(data_dict)
-    data_array = np.c_[data_array, np.zeros(shape=(data_array.shape[0], len(time_array)+1))]
+    data_array = np.c_[data_array, np.zeros(shape=(data_array.shape[0], time_array.shape[0]+1))]
     # for i in data_array:
         # if i[0] == 123:
             # print('123: ', i)
         # i[1] = path[2][i[0]][5]
+    conc_array = np.c_[data_array, np.zeros(shape=(data_array.shape[0], time_array.shape[0]+1))]
+
     for i in data_array:
         i[1] = path[2][i[0]][5]
+    for j in conc_array:
+        j[1] = path[2][j[0]][3]
     data_dict = {i[0]: i[1:] for i in data_array}
+    conc_dict = {j[0]: j[1:] for j in conc_array}
     # print(path[1][0][123], path[2][123])
     # print(data_dict)
     # print(data_dict[123])
     # print(data_array.shape, path[1][0].shape)   
     # print([i*604800 for i in time_array]) 
-    for j in path[0]:
-        for k,l in enumerate(j):
-            # for m, n in enumerate(time_array):
-                # t = n*604800
-
-                # data_dict[l][m+1] = 
-            for i,tt in enumerate(time_array):
-                # t = tt*604800
-                #max ratio = 1
-                avg_conc_ratio = (Fick(diff_coeff_mm["37"], tt, c0=None, x=k)+Fick(diff_coeff_mm["37"], tt, c0=None, x=(k+1)))/2
+    for tindex, t in enumerate(time_array):
+        for p in path[0]:
+            for index, q in enumerate(p):
+                tt = t*604800 #weeks in seconds
+                if t == 0:
+                    avg_conc_ratio = 0
+                else:
+                    avg_conc_ratio = (Fick(diff_coeff_mm["37"], tt, c0=None, x=index*pixel_scale) + Fick(diff_coeff_mm["37"], tt, c0=None, x=(index+1)*pixel_scale))/2
                 avg_conc = avg_conc_ratio*water_conc
+                conc_dict[q][tindex] = avg_conc
+                conc_array[index][tindex+1] = avg_conc
 
-                # avg_conc = water_conc * avg_conc
-                if l == 1:
-                    print(avg_conc_ratio)
-                # print(avg_conc)
-                # print('conc: ', path[2][l])
-                path[2][l][3] = avg_conc #dictionary (used to be +=)
-                path[1][0][k][4] = avg_conc #array
-                mwt = MwLoss(path[2][l][5], avg_conc, water_conc, average_loss_rate, tt)
-                data_dict[l][i+1] = mwt
-                data_array[k][i+1] = mwt
+                path[2][q][3] = avg_conc
+                path[1][0][index+1][4] = avg_conc
+
+                mwt = MwLoss(path[2][q][5], avg_conc, water_conc, average_loss_rate, tt)
+                data_dict[q][tindex] = mwt
+                data_array[index][tindex+1] = mwt
+
+
+    # for j in path[0]:
+    #     for k,l in enumerate(j):
+    #         # for m, n in enumerate(time_array):
+    #             # t = n*604800
+
+    #             # data_dict[l][m+1] = 
+    #         for i,tt in enumerate(time_array):
+    #             t = tt*604800
+    #             #max ratio = 1
+    #             if tt == 0:
+    #                 avg_conc_ratio = 0
+    #             else:
+    #                 avg_conc_ratio = (Fick(diff_coeff_mm["37"], t, c0=None, x=k)+Fick(diff_coeff_mm["37"], tt, c0=None, x=(k+1)))/2
+    #             avg_conc = avg_conc_ratio*water_conc
+    #             conc_dict[l][i+1] = avg_conc
+    #             conc_array[k][i+1] = avg_conc
+    #             print(i, tt, conc_dict[123][tt])
+    #             # if tt == 20:
+    #                 # print(conc_dict[123], '\n', conc_array[123]])
+    #             # avg_conc = water_conc * avg_conc
+    #             # if l == 123:
+    #             #     print(avg_conc_ratio)
+    #             # print(avg_conc)
+    #             # print('conc: ', path[2][l])
+    #             path[2][l][3] = avg_conc #dictionary (used to be +=)
+    #             path[1][0][k][4] = avg_conc #array
+    #             mwt = MwLoss(path[2][l][5], avg_conc, water_conc, average_loss_rate, t)
+    #             data_dict[l][i+1] = mwt
+    #             data_array[k][i+1] = mwt
                 # data_dict[l].append(mwt)
                 # if l == 123:
                     # print(data_dict[123])
@@ -663,7 +698,8 @@ def MwLossData(temp, path, time_array):
     #             # Fick(diff, i*604800, c0=water_conc, x=path[2])
     # # print(data_dict[123])
     # print(len(data_dict[123]), len(time_array))
-    # print(data_dict[123])
+    print(conc_dict[123])
+    print(data_dict[123])
     #create a 4D array with t 3D array containing mw data
     # print(data_array[123])
     return path, data_array, data_dict
@@ -721,7 +757,8 @@ if __name__ == "__main__":
     # print(mat_props[0])
     print('# adjacent = ', np.where(mat_props[0][:,3] == 1)[0].shape)
 
-    time_array = np.arange(start=1, stop=6000, step=1)
+    time_array = np.arange(start=0, stop=22, step=2)
+    print('# timepoints: ', time_array.shape[0], '\ntimepoints: ', time_array)
     
     diff_coeff = {"25": 51.7e-12, "37": 67.6e-12, "50": 165e-12} #x10^(-12) m^2/s
     diff_coeff_mm = {"25": 51.7e-5, "37": 67.6e-5, "50": 165e-5} #mm^2/s

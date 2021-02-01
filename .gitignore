@@ -4,3 +4,5 @@
 .vscode/settings.json
 .vscode/settings.json
 __pycache__/pydirectory.cpython-36.pyc
+data/.DS_Store
+*.pyc
