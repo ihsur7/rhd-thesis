@@ -9,13 +9,17 @@ import os
 import pydirectory as pyd
 import multiprocessing as multi
 
-imdir = '/data/downsample-512/'
-outdir = '/data/final-stats/freq-lt-pore/'
+# imdir = '/data/downsample-512/'
+imdir = '/data/circle-scaffold/threshold/'
+# outdir = '/data/final-stats/freq-lt-pore/'
+outdir = '/data/circle-scaffold/threshold/output/'
 direct = pyd.Directory(imdir, outdir)
 work_dir = direct.InputDIR()
 out_dir = direct.OutputDIR()
-sizes = np.logspace(start=np.log10(200), stop=0, num=100)[-1::-1]
-# print(sizes) #25 #np.arange(start=1, stop=500, step=0.1)
+# sizes = np.logspace(start=np.log10(200), stop=0, num=100)[-1::-1]
+sizes = np.logspace(start=np.log10(2000), stop=0, num=100)[-1::-1]
+
+print(sizes) #25 #np.arange(start=1, stop=500, step=0.1)
 bins = np.linspace(start=1, stop=601, num=300)
 
 for i in os.listdir(work_dir):
@@ -23,8 +27,8 @@ for i in os.listdir(work_dir):
     print('now processing... ' + i)
     data = pys.Data().data
     im1 = pys.ImageImporter(data, imdir).import_image(i)
-    im1 = pys.Filters(data, 3).median_filter() #original 15
-    im1 = pys.LocalThickness(data).local_thickness(sizes, invert=True)
+    im1 = pys.Filters(data, 1).median_filter() #original 15
+    im1 = pys.LocalThickness(data).local_thickness(sizes, invert=False)
     grid = gs.GridSpec(1, 3)
     plt.figure()
     ax = plt.subplot(grid[0, 0])
@@ -49,8 +53,8 @@ for i in os.listdir(work_dir):
     # # im1 = pys.Measure(data).measure_all(voxel_size=3.32967, bins=bins, log=False)
     # im2 = pys.save_csv(data, out_dir)
     # print('saved... ' + i + '.csv')
-    im2 = pys.save_lt(data, out_dir)
-    # im2 = pys.save_freq_count(data, out_dir)
+    # im2 = pys.save_lt(data, out_dir)
+    im2 = pys.save_freq_count(data, out_dir)
     # print(pys.hist(pys._parse_lt(data)))
     # im2 = pys.save_hist(pys._parse_lt(data), out_dir)
     print('saved... '+i+'.csv')

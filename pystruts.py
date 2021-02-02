@@ -118,7 +118,7 @@ class ImageImporter(object):
     def import_image(self, image):
         self.data[image] = {}
         self.data[image]["raw_data"] = np.array(Image.open(
-            pyd.Directory(self.inputdir + image + '.png').InputDIR() #.tif
+            pyd.Directory(self.inputdir + image + '.tif').InputDIR() #.tif
         ))
         return self.data
         
