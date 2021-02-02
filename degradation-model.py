@@ -660,69 +660,7 @@ def MwLossData(temp, path, time_array):
                 # print(data_dict[q], data_dict[q][tindex])
                 # print(data_array[index], data_array[index][tindex+1])
 
-
-    # for j in path[0]:
-    #     for k,l in enumerate(j):
-    #         # for m, n in enumerate(time_array):
-    #             # t = n*604800
-
-    #             # data_dict[l][m+1] = 
-    #         for i,tt in enumerate(time_array):
-    #             t = tt*604800
-    #             #max ratio = 1
-    #             if tt == 0:
-    #                 avg_conc_ratio = 0
-    #             else:
-    #                 avg_conc_ratio = (Fick(diff_coeff_mm["37"], t, c0=None, x=k)+Fick(diff_coeff_mm["37"], tt, c0=None, x=(k+1)))/2
-    #             avg_conc = avg_conc_ratio*water_conc
-    #             conc_dict[l][i+1] = avg_conc
-    #             conc_array[k][i+1] = avg_conc
-    #             print(i, tt, conc_dict[123][tt])
-    #             # if tt == 20:
-    #                 # print(conc_dict[123], '\n', conc_array[123]])
-    #             # avg_conc = water_conc * avg_conc
-    #             # if l == 123:
-    #             #     print(avg_conc_ratio)
-    #             # print(avg_conc)
-    #             # print('conc: ', path[2][l])
-    #             path[2][l][3] = avg_conc #dictionary (used to be +=)
-    #             path[1][0][k][4] = avg_conc #array
-    #             mwt = MwLoss(path[2][l][5], avg_conc, water_conc, average_loss_rate, t)
-    #             data_dict[l][i+1] = mwt
-    #             data_array[k][i+1] = mwt
-                # data_dict[l].append(mwt)
-                # if l == 123:
-                    # print(data_dict[123])
-    # for i in tqdm(time_array):
-    #     t = i*604800
-    #     print('timepoint: ', i)
-    #     # print('\ndictionary: ', path[2][0])
-    #     # print('\narray: ', path[1][0][0])
-    #     for j in path[0]:
-    #         for k,l in enumerate(j):
-    #             avg_conc = Fick(diff_coeff_mm["37"], t, c0=water_conc, x=k)+Fick(diff_coeff_mm["37"], t, c0=water_conc, x=(k+1))
-    #             # print(avg_conc)
-    #             # print('conc: ', path[2][l])
-    #             path[2][l][3] += avg_conc #dictionary
-    #             path[1][0][k][4] += avg_conc #array
-    #             mwt = MwLoss(path[2][l][5], avg_conc, water_conc, average_loss_rate, t)
-    #             data_dict[l].append(mwt)
-    #             if l == 123:
-    #                 print(data_dict[123])
-    #             # path[2][l][5] = mwt
-    #             # path[1][0][k][6] = mwt
-    #             # Fick(diff, i*604800, c0=water_conc, x=path[2])
-    # # print(data_dict[123])
-    # print(len(data_dict[123]), len(time_array))
-    # print('concentration: ', conc_dict[9])
-    # print(len(conc_dict[9]))
-    # print('mw data: ', data_dict[9])
-    #create a 4D array with t 3D array containing mw data
-    # print(data_array[123])
     return path, data_array, data_dict
-
-def MwLossRate():
-    return 900 #g/mol/day
 
 def AssignMw(led):
     if str.lower(led) == "high":
@@ -774,7 +712,7 @@ if __name__ == "__main__":
     # print(mat_props[0])
     print('# adjacent = ', np.where(mat_props[0][:,3] == 1)[0].shape)
 
-    time_array = np.arange(start=0, stop=22, step=2)
+    time_array = np.arange(start=0, stop=21, step=1)
     print('# timepoints: ', time_array.shape[0], '\ntimepoints: ', time_array)
     
     diff_coeff = {"25": 51.7e-12, "37": 67.6e-12, "50": 165e-12} #x10^(-12) m^2/s
@@ -792,6 +730,8 @@ if __name__ == "__main__":
     path = np.load(output_dir+'path_array.npy',allow_pickle=True)
     #Calculate Molecular Weight
     mw_data = MwLossData("37", path, time_array)
+
+
     # print(idarr[0].shape)
     vol = vedo.Volume(idarr[0])
     vol.addScalarBar3D()
@@ -809,7 +749,17 @@ if __name__ == "__main__":
     text1 = vedo.Text2D('Make a Volume from numpy.mgrid', c='blue')
     text2 = vedo.Text2D('its lego isosurface representation\nvmin=1, vmax=2', c='dr')
     # print(mw_data[1][123])
-    print("Avg Mw: ", [np.average(mw_data[1][:,i]) for i in np.arange(1, time_array.shape[0]+1)])
+    
+    avg_mw = [np.average(mw_data[1][:,i]) for i in np.arange(1, time_array.shape[0]+1)]
+    print("Avg Mw: ", avg_mw)
+    save_array = np.zeros(shape=(time_array.shape[0], 2))
+    print(save_array.shape)
+    print(save_array)
+    for index, i in enumerate(time_array):
+        save_array[index][0] = i
+        save_array[index][1] = avg_mw[index]
+
+    np.save(out_dir+'mw_data', save_array)
     # print('numpy array from Volume:', 
     #     vol.getPointArray().shape, 
     #     vol.getDataArray().shape)
@@ -1114,3 +1064,64 @@ if __name__ == "__main__":
 #     # print(input_dir)
 #     # print(output_dir)
 #     return
+
+
+
+    # for j in path[0]:
+    #     for k,l in enumerate(j):
+    #         # for m, n in enumerate(time_array):
+    #             # t = n*604800
+
+    #             # data_dict[l][m+1] = 
+    #         for i,tt in enumerate(time_array):
+    #             t = tt*604800
+    #             #max ratio = 1
+    #             if tt == 0:
+    #                 avg_conc_ratio = 0
+    #             else:
+    #                 avg_conc_ratio = (Fick(diff_coeff_mm["37"], t, c0=None, x=k)+Fick(diff_coeff_mm["37"], tt, c0=None, x=(k+1)))/2
+    #             avg_conc = avg_conc_ratio*water_conc
+    #             conc_dict[l][i+1] = avg_conc
+    #             conc_array[k][i+1] = avg_conc
+    #             print(i, tt, conc_dict[123][tt])
+    #             # if tt == 20:
+    #                 # print(conc_dict[123], '\n', conc_array[123]])
+    #             # avg_conc = water_conc * avg_conc
+    #             # if l == 123:
+    #             #     print(avg_conc_ratio)
+    #             # print(avg_conc)
+    #             # print('conc: ', path[2][l])
+    #             path[2][l][3] = avg_conc #dictionary (used to be +=)
+    #             path[1][0][k][4] = avg_conc #array
+    #             mwt = MwLoss(path[2][l][5], avg_conc, water_conc, average_loss_rate, t)
+    #             data_dict[l][i+1] = mwt
+    #             data_array[k][i+1] = mwt
+                # data_dict[l].append(mwt)
+                # if l == 123:
+                    # print(data_dict[123])
+    # for i in tqdm(time_array):
+    #     t = i*604800
+    #     print('timepoint: ', i)
+    #     # print('\ndictionary: ', path[2][0])
+    #     # print('\narray: ', path[1][0][0])
+    #     for j in path[0]:
+    #         for k,l in enumerate(j):
+    #             avg_conc = Fick(diff_coeff_mm["37"], t, c0=water_conc, x=k)+Fick(diff_coeff_mm["37"], t, c0=water_conc, x=(k+1))
+    #             # print(avg_conc)
+    #             # print('conc: ', path[2][l])
+    #             path[2][l][3] += avg_conc #dictionary
+    #             path[1][0][k][4] += avg_conc #array
+    #             mwt = MwLoss(path[2][l][5], avg_conc, water_conc, average_loss_rate, t)
+    #             data_dict[l].append(mwt)
+    #             if l == 123:
+    #                 print(data_dict[123])
+    #             # path[2][l][5] = mwt
+    #             # path[1][0][k][6] = mwt
+    #             # Fick(diff, i*604800, c0=water_conc, x=path[2])
+    # # print(data_dict[123])
+    # print(len(data_dict[123]), len(time_array))
+    # print('concentration: ', conc_dict[9])
+    # print(len(conc_dict[9]))
+    # print('mw data: ', data_dict[9])
+    #create a 4D array with t 3D array containing mw data
+    # print(data_array[123])
