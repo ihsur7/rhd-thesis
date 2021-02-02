@@ -565,26 +565,28 @@ def Fick(diff, t, c0 = None, x=1):
         return c0*math.erfc(x/(math.sqrt(4*diff*t)))
 
     conc_ratio = math.erfc(x/(math.sqrt(4*diff*t)))
+    # print(conc_ratio)
     if conc_ratio < 1:
         return conc_ratio
     else:
         return 1
 
-def grad_calc(loss_rate, conc_ratio, type='linear'):
+def loss_rate_calc(loss_rate, conc_ratio, type='linear'):
     if conc_ratio == 0:
         return 0
     else:
-        return loss_rate/(conc_ratio)
+        return loss_rate*(conc_ratio)
 
 def MwLoss(mw0, c, c0, avg_loss_rate, t):
     # print(c/c0)
     grad1 = grad_calc(avg_loss_rate, conc_ratio=c/c0)
     loss_rate = grad1*avg_loss_rate
+    # print(loss_rate)
     return mw0*math.e**(-loss_rate*t)
 
 def MwLossData(temp, path, time_array):
     # loss_rate= [0.001776, 0.002112, 0.002527] #ln, in weeks too high, may need to be in seconds
-    loss_rate = [2.93651e-9, 3.49206e-9, 4.17824e-9] #ln, in seconds
+    loss_rate = [4.900e-008, 4.737e-008, 4.262e-008] #ln, in seconds
     # loss_rate = [0.0007610, 0.0008171, 0.001194]
     # loss_rate = [0.0002538, 0.0003017, 0.0003611] #ln, in days    
     average_loss_rate = np.average(loss_rate)
@@ -603,28 +605,32 @@ def MwLossData(temp, path, time_array):
     data_array = [i[0] for i in path[1][0]]
     data_array = np.asarray_chkfinite(data_array)
     data_array = data_array.reshape(data_array.shape[0],-1)
+    conc_array = data_array
     # data_array = np.empty(shape=(path[1][0].shape[0],len(time_array+1)))
     # data_dict = {i: [path[2][i][5]] for i in path[2]}
     # data_dict = {j[0]: j[5] for j in path[2][j]}
     # print(data_dict)
-    data_array = np.c_[data_array, np.zeros(shape=(data_array.shape[0], time_array.shape[0]+1))]
+    data_array = np.c_[data_array, np.zeros(shape=(data_array.shape[0], time_array.shape[0]))]
     # for i in data_array:
         # if i[0] == 123:
             # print('123: ', i)
         # i[1] = path[2][i[0]][5]
-    conc_array = np.c_[data_array, np.zeros(shape=(data_array.shape[0], time_array.shape[0]+1))]
-
+    # print(data_array.shape)
+    conc_array = np.c_[conc_array, np.zeros(shape=(conc_array.shape[0], time_array.shape[0]))]
+    # print(conc_array.shape)
     for i in data_array:
         i[1] = path[2][i[0]][5]
     for j in conc_array:
         j[1] = path[2][j[0]][3]
     data_dict = {i[0]: i[1:] for i in data_array}
     conc_dict = {j[0]: j[1:] for j in conc_array}
+    # print(len(conc_dict[9]))
     # print(path[1][0][123], path[2][123])
     # print(data_dict)
     # print(data_dict[123])
     # print(data_array.shape, path[1][0].shape)   
     # print([i*604800 for i in time_array]) 
+    # print(path[0][0])
     for tindex, t in enumerate(time_array):
         for p in path[0]:
             for index, q in enumerate(p):
@@ -632,17 +638,27 @@ def MwLossData(temp, path, time_array):
                 if t == 0:
                     avg_conc_ratio = 0
                 else:
+                    # print((index+1)*pixel_scale)
                     avg_conc_ratio = (Fick(diff_coeff_mm["37"], tt, c0=None, x=index*pixel_scale) + Fick(diff_coeff_mm["37"], tt, c0=None, x=(index+1)*pixel_scale))/2
+
                 avg_conc = avg_conc_ratio*water_conc
-                conc_dict[q][tindex] = avg_conc
-                conc_array[index][tindex+1] = avg_conc
+                # if q == 9:
+                #     print(avg_conc_ratio, avg_conc)
+                #     print(conc_dict[9])
+                conc_dict[q][tindex] = avg_conc_ratio
+                conc_array[index][tindex+1] = avg_conc_ratio
 
                 path[2][q][3] = avg_conc
                 path[1][0][index+1][4] = avg_conc
-
-                mwt = MwLoss(path[2][q][5], avg_conc, water_conc, average_loss_rate, tt)
+                # print(path[2][q][5])
+                grad = loss_rate_calc(average_loss_rate, avg_conc_ratio)
+                mwt = path[2][q][5]*math.e**(-1*(grad)*tt)
+                # mwt = MwLoss(path[2][q][5], avg_conc, water_conc, average_loss_rate, tt)
+                # print(tindex)
                 data_dict[q][tindex] = mwt
                 data_array[index][tindex+1] = mwt
+                # print(data_dict[q], data_dict[q][tindex])
+                # print(data_array[index], data_array[index][tindex+1])
 
 
     # for j in path[0]:
@@ -698,8 +714,9 @@ def MwLossData(temp, path, time_array):
     #             # Fick(diff, i*604800, c0=water_conc, x=path[2])
     # # print(data_dict[123])
     # print(len(data_dict[123]), len(time_array))
-    print(conc_dict[123])
-    print(data_dict[123])
+    # print('concentration: ', conc_dict[9])
+    # print(len(conc_dict[9]))
+    # print('mw data: ', data_dict[9])
     #create a 4D array with t 3D array containing mw data
     # print(data_array[123])
     return path, data_array, data_dict
@@ -763,7 +780,7 @@ if __name__ == "__main__":
     diff_coeff = {"25": 51.7e-12, "37": 67.6e-12, "50": 165e-12} #x10^(-12) m^2/s
     diff_coeff_mm = {"25": 51.7e-5, "37": 67.6e-5, "50": 165e-5} #mm^2/s
     # print(diff_coeff_mm)
-    pixel_scale = 10/300 #mm/px * 1px
+    pixel_scale = 0.25/35 #mm/px * 1px
     temp = '37'
     # iter_fick(300, temp, pixel_scale, coords, mat_props, nparr, idarr, flowpath)
     # path = iter_path(2, coords, mat_props, nparr, idarr, flowpath, bias=True)
@@ -791,8 +808,8 @@ if __name__ == "__main__":
     lego.addScalarBar3D()
     text1 = vedo.Text2D('Make a Volume from numpy.mgrid', c='blue')
     text2 = vedo.Text2D('its lego isosurface representation\nvmin=1, vmax=2', c='dr')
-    print(mw_data[1][123])
-    print("Avg Mw: ", [np.average(mw_data[1][:,i]) for i in np.arange(1, time_array.shape[0]+2)])
+    # print(mw_data[1][123])
+    print("Avg Mw: ", [np.average(mw_data[1][:,i]) for i in np.arange(1, time_array.shape[0]+1)])
     # print('numpy array from Volume:', 
     #     vol.getPointArray().shape, 
     #     vol.getDataArray().shape)
