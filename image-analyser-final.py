@@ -115,7 +115,9 @@ class AnalyseImage():
                 self.data["local_thickness"][i] = self.local_thickness(self.data["inverted_image"][i])
         elif measure == "material":
             for i in self.data["filter"]:
-                print('processing layer ... ' + self.data["layer"][i])
+                print(i)
+                print(self.data)
+                print('processing layer ... ' + self.data[i])
                 self.data["local_thickness"][i] = self.local_thickness(self.data["filter"][i])
         else:
             raise Exception("Unknown measure: " + measure)
@@ -189,9 +191,10 @@ def saveCSV(output):
 if __name__ == "__main__":
     data = Data().data
     prefs = Data().preferences
-    prefs["input"] = '/data/downsample-2048-man-thres/nx-4/'
+    prefs["input"] = '/data/circle-scaffold/threshold/'
+    # prefs["input"] = '/data/downsample-2048-man-thres/nx-4/'
     prefs["log"] = False
-    prefs["layer"] = ['nx-12'] #, '4-lx', '8-lx', '12-lx', '16-lx', '20-lx']
+    prefs["layer"] = ['1line', '2lines'] #, '4-lx', '8-lx', '12-lx', '16-lx', '20-lx']
     prefs["sizes"] = 50
     prefs["bins"] = int(prefs["sizes"] / 2)
     print("Preferences: {}".format(prefs))
