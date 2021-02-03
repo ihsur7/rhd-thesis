@@ -603,7 +603,7 @@ def MwLoss(mw0, c, c0, avg_loss_rate, t):
     # print(loss_rate)
     return mw0*math.e**(-loss_rate*t)
 
-def MwLossData(temp, path, time_array):
+def MwLossData(temp, path, time_array, gradtype='linear'):
     # loss_rate= [0.001776, 0.002112, 0.002527] #ln, in weeks too high, may need to be in seconds
     loss_rate = [4.900e-008, 4.737e-008, 4.262e-008] #ln, in seconds
     # loss_rate = [0.0007610, 0.0008171, 0.001194]
@@ -650,6 +650,7 @@ def MwLossData(temp, path, time_array):
     # print(data_array.shape, path[1][0].shape)   
     # print([i*604800 for i in time_array]) 
     # print(path[0][0])
+
     for tindex, t in enumerate(time_array):
         for p in path[0]:
             for index, q in enumerate(p):
@@ -670,7 +671,11 @@ def MwLossData(temp, path, time_array):
                 path[2][q][3] = avg_conc
                 path[1][0][index+1][4] = avg_conc
                 # print(path[2][q][5])
-                grad = loss_rate_calc(average_loss_rate, avg_conc_ratio)
+                if gradtype = "linear":
+                    grad = avg_conc_ratio*average_loss_rate
+                    # grad = loss_rate_calc(average_loss_rate, avg_conc_ratio)
+                elif gradtype = "exp":
+                    grad = 
                 mwt = path[2][q][5]*math.e**(-1*(grad)*tt)
                 # mwt = MwLoss(path[2][q][5], avg_conc, water_conc, average_loss_rate, tt)
                 # print(tindex)
@@ -763,7 +768,7 @@ if __name__ == "__main__":
     # print('# paths = ', flowpath.shape)
 
     #Calculate Molecular Weight
-    mw_data = MwLossData("37", path, time_array)
+    mw_data = MwLossData("37", path, time_array, gradtype='exp')
 
 
     # print(idarr[0].shape)
