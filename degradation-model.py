@@ -417,6 +417,7 @@ def iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_arra
     #second one tells where it splits
     prob_self = 0.001
     pm_p = 0.1
+    pm_a = 2
     coords_dict = {}
     prop_dict = {}
     prop_shape = prop_array[0].shape
@@ -483,8 +484,8 @@ def iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_arra
                     #     for i in id_list:
                     #         print(prop_dict[i])
                     # print(prop_dict[199])
-                    pm_c = sum_prob/((2*npa_na)+npc_nc)
-                    pm_a = 2*pm_c
+                    pm_c = sum_prob/((pm_a*npa_na)+npc_nc)
+                    pm_a = pm_a*pm_c
                     ppa = pm_a*pm_p
                     ppc = pm_c*pm_p
                     center_id = id_list[0]
@@ -522,12 +523,14 @@ def iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_arra
                     prop_array[0][int(j[t])][1] = 1
                 else:
                     single_px_counter += 1
-            print('#single pixels: ', single_px_counter)
             # np.save(output_dir+'patharray.npy', path_array)
             steps += 1
+            # print(steps)
     else:
         print('All voxels pathed.')
         print('Steps required: ', steps)
+    print('#single pixels: ', single_px_counter)
+
     # for i in dist_array:
     #     dupe_list = [k for k,v in Counter(i).items() if v>1]
 
@@ -706,29 +709,41 @@ def AssignXc(led):
 
 if __name__ == "__main__":
     print('numpy version = ', np.__version__)
-    print('open3d version: = ', otd.__version__)
+    # print('open3d version: = ', otd.__version__)
 
     #Set up directories
-    in_dir = "/data/sample1/50/"  # '/data/sample1/25/model/25.stl' #"/data/sample1/25/uct/tiff/"
+    in_dir = "/data/sample1/25/uct/tiff/"  # '/data/sample1/25/model/25.stl' #"/data/sample1/25/uct/tiff/"
     out_dir = "/data/deg_test_output/"
     dir = pyd.Directory(in_dir, out_dir)
     input_dir = dir.InputDIR()
     output_dir = dir.OutputDIR()
     new_input_dir = pyd.Directory(out_dir).InputDIR()
-    
+    # print(os.path.exists(output_dir+'path_array.npy'))
+    if os.path.exists(output_dir+'path_array.npy'):
+        print('file found...')
+    print('checking if file contents match input data...')
+    path = np.load(output_dir+'path_array.npy',allow_pickle=True)
+    num_adj = np.where(path[0][:,3] == 1)[0].shape
+
+    if path[0].shape[0] != num_adj[0]:
+        print('file does not match... creating new data')
+        a = Voxelize(input_dir)
+        coords = a.coord_array()
+        props = a.matprops_array(numprops=8)
+        nparr = a.to_numpy()
+        idarr = a.vox_id()
+        mat_props = InitPixelClassifier(coords, nparr, props).init_classify(0.097, 0.67, 3) 
+        flowpath = PathArray(coords, nparr, mat_props[0]).initPathArray()
+        path = iter_path(2, coords, mat_props, nparr, idarr, flowpath, bias=True)
+    else:
+        print('file matches input data')
     #Set up model and metadata
-    a = Voxelize(input_dir)
-    coords = a.coord_array()
-    props = a.matprops_array(numprops=8)
-    nparr = a.to_numpy()
-    idarr = a.vox_id()
+
     print('model resolution = ', nparr[0].shape)
     print('# polymer voxels = ', coords.shape)
-    mat_props = InitPixelClassifier(coords, nparr, props).init_classify(0.097, 0.67, 3) 
     #25 = 211.88 seconds on macbook, ~50k paths (flow vectors)
     #50 = 
     # print(mat_props[0])
-    num_adj = np.where(mat_props[0][:,3] == 1)[0].shape
     print('# adjacent = ', num_adj)
 
     time_array = np.arange(start=0, stop=21, step=1)
@@ -742,11 +757,7 @@ if __name__ == "__main__":
     # iter_fick(300, temp, pixel_scale, coords, mat_props, nparr, idarr, flowpath)
 
     #Calculate Flowpath
-    if os.path.exists(output_dir+'path_array.npy'):
-        path = np.load(output_dir+'path_array.npy',allow_pickle=True)
-        if path[0].shape[0] != num_adj[0]:
-            flowpath = PathArray(coords, nparr, mat_props[0]).initPathArray()
-            path = iter_path(2, coords, mat_props, nparr, idarr, flowpath, bias=True)
+
 
     
     # print('# paths = ', flowpath.shape)
