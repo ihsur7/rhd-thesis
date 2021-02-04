@@ -553,10 +553,11 @@ def Fick(diff, t, c0 = None, x=1):
 
     conc_ratio = math.erfc(x/(math.sqrt(4*diff*t)))
     # print(conc_ratio)
-    if conc_ratio < 1:
-        return conc_ratio
-    else:
-        return 1
+    return conc_ratio
+    # if conc_ratio < 1:
+    #     return conc_ratio
+    # else:
+    #     return 1
 
 
 def MwLossData(temp, path, time_array, gradtype='linear'):
@@ -630,7 +631,7 @@ def MwLossData(temp, path, time_array, gradtype='linear'):
                 else:
                     multiplier = 1
                     
-                loss_rate = average_loss_rate**multiplier
+                loss_rate = average_loss_rate*multiplier
                 # loss_rate = average_loss_rate**
                 mwt = path[2][q][5]*math.e**(-1*(loss_rate)*tt)
                 # mwt = MwLoss(path[2][q][5], avg_conc, water_conc, average_loss_rate, tt)
@@ -719,21 +720,35 @@ if __name__ == "__main__":
     # iter_fick(300, temp, pixel_scale, coords, mat_props, nparr, idarr, flowpath)
 
     #Calculate Flowpath
-
-    gradtype1 = 'log'
+    gradtypelist = ['lin', 'exp', 'log', 'quad']
+    for gradtype1 in gradtypelist:
+        print('calculating Mw data...')
+        mw_data = MwLossData("37", path, time_array, gradtype=gradtype1)
+        mw_data_array = idarr[0]
+        avg_mw = [np.average(mw_data[1][:,i]) for i in np.arange(1, time_array.shape[0]+1)]
+        print("Avg Mw: ", avg_mw)
+        save_array = np.zeros(shape=(time_array.shape[0], 2))
+        # print(save_array.shape)
+        # print(save_array)
+        print('saving Avg. Mw data...')
+        for index, i in enumerate(time_array):
+            save_array[index][0] = i
+            save_array[index][1] = avg_mw[index]
+        pd.DataFrame(save_array).to_csv(output_dir+'mw_data'+'_'+gradtype1+'.csv')
+        print('saved.')
+    # gradtype1 = 'exp'
     
     # print('# paths = ', flowpath.shape)
 
     #Calculate Molecular Weight
-    print('calculating Mw data...')
-    mw_data = MwLossData("37", path, time_array, gradtype=gradtype1)
+
 
 
     # print(idarr[0].shape)
     # vol = vedo.Volume(idarr[0])
     # vol.addScalarBar3D()
 
-    mw_data_array = idarr[0]
+
 
     # for i in mw_data_array:
     #     for j in i:
@@ -747,17 +762,7 @@ if __name__ == "__main__":
     # text2 = vedo.Text2D('its lego isosurface representation\nvmin=1, vmax=2', c='dr')
     # print(mw_data[1][123])
     
-    avg_mw = [np.average(mw_data[1][:,i]) for i in np.arange(1, time_array.shape[0]+1)]
-    print("Avg Mw: ", avg_mw)
-    save_array = np.zeros(shape=(time_array.shape[0], 2))
-    # print(save_array.shape)
-    # print(save_array)
-    print('saving Avg. Mw data...')
-    for index, i in enumerate(time_array):
-        save_array[index][0] = i
-        save_array[index][1] = avg_mw[index]
-    pd.DataFrame(save_array).to_csv(output_dir+'mw_data'+'_'+gradtype1+'.csv')
-    print('saved.')
+
     # np.savetxt(out_dir+'mw_data', save_array, allow_pickle=True)
     # print('numpy array from Volume:', 
     #     vol.getPointArray().shape, 
