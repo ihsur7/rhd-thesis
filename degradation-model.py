@@ -540,39 +540,7 @@ def iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_arra
     # np.save(output_dir+'prop_array', prop_array)
     return path_array, prop_array, prop_dict, coords_dict
 
-def iter_fick(max_steps, temp, pixel_scale, coords_array, prop_array, np_array, id_array, path_array, bias = False):
-    pha_density = 1.240 * (1/1000**2) #g/m3
-    diff_coeff_mm = {"25": 51.7e-5, "37": 67.6e-5, "50": 165e-5} #mm^2/s
-    diff = diff_coeff_mm[temp]
-    prop_shape = prop_array[0].shape
-    voxel_vol = pixel_scale**3 #mm^3
-    voxel_mass = pha_density * voxel_vol
-    water_mass = voxel_mass * 0.00984
-    water_conc = water_mass/voxel_vol
-    n = 10
-    coords_dict = {i[0]: np.array(i[1:4]) for i in coords_array}
-    prop_dict = {j[0]: j[1:] for j in prop_array[0]}
-    path = iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_array, bias = False)
-    # for t in tqdm(np.arange(1, max_steps+1)):
-    t=max_steps
-    for i in path[0:1]:
-        for j,k in enumerate(i):
-            avg_conc = Fick(diff_coeff_mm["37"], t, c0=water_conc, x=j)+Fick(diff_coeff_mm["37"], t, c0=water_conc, x=(j+1))
-            # print(avg_conc)
-            prop_dict[k][4] += avg_conc
-            # diff_list = np.zeros(n)
-            # conc_list = np.zeros(n-1)
-            # for x in np.arange(0, n):
-            #     diff_list[x] = Fick(diff_coeff_mm["37"], t, c0=water_conc, x=(j+1/n))
-            # for index, x in enumerate(conc_list):
-            #     x = (diff_list[index]+diff_list[index+1])/2
-            # total_conc = sum(i*1/n for i in conc_list)
-            # print(total_conc)
-            # prop_dict[k][4] += total_conc
-            # # total_conc = np.sum([lambda i: i*(1/n) for i in conc_list])
-            # # print(total_conc)
-    print(prop_dict[path[0][0]][4])
-    return
+
 
 def Fick(diff, t, c0 = None, x=1):
     """
@@ -590,18 +558,6 @@ def Fick(diff, t, c0 = None, x=1):
     else:
         return 1
 
-def loss_rate_calc(loss_rate, conc_ratio, type='linear'):
-    if conc_ratio == 0:
-        return 0
-    else:
-        return loss_rate*(conc_ratio)
-
-def MwLoss(mw0, c, c0, avg_loss_rate, t):
-    # print(c/c0)
-    grad1 = grad_calc(avg_loss_rate, conc_ratio=c/c0)
-    loss_rate = grad1*avg_loss_rate
-    # print(loss_rate)
-    return mw0*math.e**(-loss_rate*t)
 
 def MwLossData(temp, path, time_array, gradtype='linear'):
     # loss_rate= [0.001776, 0.002112, 0.002527] #ln, in weeks too high, may need to be in seconds
@@ -620,38 +576,24 @@ def MwLossData(temp, path, time_array, gradtype='linear'):
     mw_pbs = 411.04 #g/mol
     water_conc = (water_mass/voxel_vol)*(1/mw_water)
     print("C0: ", water_conc)
-    # print(path[1])
+
     data_array = [i[0] for i in path[1][0]]
     data_array = np.asarray_chkfinite(data_array)
     data_array = data_array.reshape(data_array.shape[0],-1)
     conc_array = data_array
-    # data_array = np.empty(shape=(path[1][0].shape[0],len(time_array+1)))
-    # data_dict = {i: [path[2][i][5]] for i in path[2]}
-    # data_dict = {j[0]: j[5] for j in path[2][j]}
-    # print(data_dict)
+
     data_array = np.c_[data_array, np.zeros(shape=(data_array.shape[0], time_array.shape[0]))]
-    # for i in data_array:
-        # if i[0] == 123:
-            # print('123: ', i)
-        # i[1] = path[2][i[0]][5]
-    # print(data_array.shape)
+
     conc_array = np.c_[conc_array, np.zeros(shape=(conc_array.shape[0], time_array.shape[0]))]
-    # print(conc_array.shape)
+
     for i in data_array:
         i[1] = path[2][i[0]][5]
     for j in conc_array:
         j[1] = path[2][j[0]][3]
     data_dict = {i[0]: i[1:] for i in data_array}
     conc_dict = {j[0]: j[1:] for j in conc_array}
-    # print(len(conc_dict[9]))
-    # print(path[1][0][123], path[2][123])
-    # print(data_dict)
-    # print(data_dict[123])
-    # print(data_array.shape, path[1][0].shape)   
-    # print([i*604800 for i in time_array]) 
-    # print(path[0][0])
 
-    for tindex, t in enumerate(time_array):
+    for tindex, t in enumerate(tqdm(time_array)):
         for p in path[0]:
             for index, q in enumerate(p):
                 tt = t*604800 #weeks in seconds
@@ -671,12 +613,26 @@ def MwLossData(temp, path, time_array, gradtype='linear'):
                 path[2][q][3] = avg_conc
                 path[1][0][index+1][4] = avg_conc
                 # print(path[2][q][5])
-                if gradtype = "linear":
-                    grad = avg_conc_ratio*average_loss_rate
+                
+                if gradtype == "linear":
+                    multiplier = avg_conc_ratio
                     # grad = loss_rate_calc(average_loss_rate, avg_conc_ratio)
-                elif gradtype = "exp":
-                    grad = 
-                mwt = path[2][q][5]*math.e**(-1*(grad)*tt)
+                elif gradtype == "exp":
+                    a = 0.05
+                    multiplier = a*math.e**(math.log((1/a)+1)*avg_conc_ratio)-1
+                elif gradtype == 'log':
+                    multiplier = (1/math.log10(2))*math.log10(avg_conc_ratio+1)
+                elif gradtype == 'quad':
+                    a = -1
+                    b = 1
+                    c = 1
+                    multiplier = a*(avg_conc_ratio**2) + b*avg_conc_ratio + c
+                else:
+                    multiplier = 1
+                    
+                loss_rate = average_loss_rate**multiplier
+                # loss_rate = average_loss_rate**
+                mwt = path[2][q][5]*math.e**(-1*(loss_rate)*tt)
                 # mwt = MwLoss(path[2][q][5], avg_conc, water_conc, average_loss_rate, tt)
                 # print(tindex)
                 data_dict[q][tindex] = mwt
@@ -728,15 +684,16 @@ if __name__ == "__main__":
         print('file found...')
     print('checking if file contents match input data...')
     path = np.load(output_dir+'path_array.npy',allow_pickle=True)
-    num_adj = np.where(path[0][:,3] == 1)[0].shape
+    num_adj = np.where(path[1][0][:,3] == 1)[0].shape
+    a = Voxelize(input_dir)
+    coords = a.coord_array()
+    props = a.matprops_array(numprops=8)
+    nparr = a.to_numpy()
+    idarr = a.vox_id()
 
-    if path[0].shape[0] != num_adj[0]:
+    if props.shape[0] != path[1][0].shape[0]:
         print('file does not match... creating new data')
-        a = Voxelize(input_dir)
-        coords = a.coord_array()
-        props = a.matprops_array(numprops=8)
-        nparr = a.to_numpy()
-        idarr = a.vox_id()
+
         mat_props = InitPixelClassifier(coords, nparr, props).init_classify(0.097, 0.67, 3) 
         flowpath = PathArray(coords, nparr, mat_props[0]).initPathArray()
         path = iter_path(2, coords, mat_props, nparr, idarr, flowpath, bias=True)
@@ -763,17 +720,18 @@ if __name__ == "__main__":
 
     #Calculate Flowpath
 
-
+    gradtype1 = 'log'
     
     # print('# paths = ', flowpath.shape)
 
     #Calculate Molecular Weight
-    mw_data = MwLossData("37", path, time_array, gradtype='exp')
+    print('calculating Mw data...')
+    mw_data = MwLossData("37", path, time_array, gradtype=gradtype1)
 
 
     # print(idarr[0].shape)
-    vol = vedo.Volume(idarr[0])
-    vol.addScalarBar3D()
+    # vol = vedo.Volume(idarr[0])
+    # vol.addScalarBar3D()
 
     mw_data_array = idarr[0]
 
@@ -783,21 +741,23 @@ if __name__ == "__main__":
     #             k = mw_data[1][k][1]
         
 
-    lego = vol.legosurface(vmin=1, vmax=coords.shape[0])
-    lego.addScalarBar3D()
-    text1 = vedo.Text2D('Make a Volume from numpy.mgrid', c='blue')
-    text2 = vedo.Text2D('its lego isosurface representation\nvmin=1, vmax=2', c='dr')
+    # lego = vol.legosurface(vmin=1, vmax=coords.shape[0])
+    # lego.addScalarBar3D()
+    # text1 = vedo.Text2D('Make a Volume from numpy.mgrid', c='blue')
+    # text2 = vedo.Text2D('its lego isosurface representation\nvmin=1, vmax=2', c='dr')
     # print(mw_data[1][123])
     
     avg_mw = [np.average(mw_data[1][:,i]) for i in np.arange(1, time_array.shape[0]+1)]
     print("Avg Mw: ", avg_mw)
     save_array = np.zeros(shape=(time_array.shape[0], 2))
-    print(save_array.shape)
+    # print(save_array.shape)
     # print(save_array)
+    print('saving Avg. Mw data...')
     for index, i in enumerate(time_array):
         save_array[index][0] = i
         save_array[index][1] = avg_mw[index]
-    pd.DataFrame(save_array).to_csv(output_dir+'mw_data.csv')
+    pd.DataFrame(save_array).to_csv(output_dir+'mw_data'+'_'+gradtype1+'.csv')
+    print('saved.')
     # np.savetxt(out_dir+'mw_data', save_array, allow_pickle=True)
     # print('numpy array from Volume:', 
     #     vol.getPointArray().shape, 
@@ -805,362 +765,3 @@ if __name__ == "__main__":
 
     # vedo.show([(vol,text1), (lego,text2)], N=2, azimuth=10)
     # vedo.show(lego,axes=1)
-#Fick's Law of Diffusion 
-##Assume 1D initially, infinite source
-##Molarity (concentration): C = m/V * 1/MW
-##m = mass of solute (g), V is volume of solution in (L), MW is molecular weight, C is molar concentration (mol/L)
-
-
-
-#Fick's 2nd Law determines concentration change over time - eq. similar to heat eq
-#x goes from 0 -> 1 going through the length of the voxel
-#iter = time, the function is meant to run each iteration to update the concetration of water in the exposed voxel
-#conecntration units: mol/mm^3
-#concentration at surface = M_s = saturation mass of water
-#therefore, Fick function determines 
-
-
-    # return (1/(math.sqrt(math.pi*diff*t)))*(math.exp(-((x**2)/(4*diff*t))))
-
-
-
-#once C/C0 reaches 0.5, random walk takes place
-# pha_density = 1.240 * (1/1000**2) #g/m3
-# diff_coeff_mm = {"25": 51.7e-5, "37": 67.6e-5, "50": 165e-5} #mm^2/s
-# diff = diff_coeff_mm['37']
-# pixel_scale=1
-# voxel_vol = pixel_scale**3 #mm^3
-# voxel_mass = pha_density * voxel_vol
-# water_mass = voxel_mass * 0.00984
-# water_conc = water_mass/voxel_vol
-
-# print(Fick(diff_coeff_mm["37"], 30, c0 = water_conc))
-
-#Mw loss function (units g/mol/day) Mw loss rate: 900 g/mol/day
-#crystallinity (Poisson distribution)
-#relate Mw to mechanical properties
-#use voxel model to assign Mw value and reduce it using the loss function
-#in the amorphous regions
-#maybe nodal FEA modelling
-#assumptions:
-##each voxel has equal density
-
-# def iter(coords_array, prop_array, np_array, id_array, path_array, bias = False):
-#     #initialise 3D array shape of np_array with zeros that dynamically changes values
-#     #the values are probability numbers 
-#     # prob_array = np.zeros(shape=np_array[1], dtype=float)
-#     # prob_array = np.zeros(shape=(3,3,3), dtype=float)
-#     # print(prob_array)
-
-#     #for each property array row, if voxel is active, run randomwalk
-#     t = 0
-#     print("t = ", t)
-
-#     max_steps = 3
-#     prob_crys = 0.5
-#     prob_amorph = 1.5
-#     prob_self = 0.5
-#     # print(coords_array)
-#     # print(prop_array[0])
-#     coords_dict = {}
-#     prop_dict = {}
-#     prop_shape = prop_array[0].shape
-#     # print(path_array.shape)
-#     # print(prop_shape)
-#     for i in coords_array:
-#         coords_dict[i[0]] = np.array(i[1:4])
-#     for j in prop_array[0]:
-#         prop_dict[j[0]] = j[1:prop_shape[1]]
-#     # print(prop_dict)
-#     # print(mat_props)
-#     # print(path_array)
-#     # print(coords_dict[0])
-#     # for t in tqdm(range(max_steps)):
-#     # pbar = tqdm(total=max_steps+1)
-#     while t < max_steps:
-#         path_array = np.c_[path_array, np.zeros(path_array.shape[0])]
-#         it = 0
-#         #iterates through coordinate array, instead it should iterate through flowpath array as it needs assign the next coordinate for the path
-#         for j in coords_array:
-#             # print(t)
-#             # print(path_array.shape)
-#             # print(j)
-#             #checks if voxel is active, find neighbouring voxels
-#             if prop_dict[j[0]][2] == 1:
-#                 # print(j)
-#                 it += 1
-#             # print(k)
-#             # if k[2] == 1: 
-#                 # print(coords_array)
-#                 x,y,z = coords_dict[j[0]]
-#                 # x, y, z = coords_array[j][1], coords_array[j][2], coords_array[j][3]
-#                 #gets coordinates of neighbouring voxels
-#                 neighbour_list = neighbours(x, y, z, res = np_array[1])
-#                 # print(neighbour_list)
-#                 id_list = []
-#                 id_list.append(j[0])
-#                 for a in neighbour_list:
-#                     #if pixel is white/polymer
-#                     # print(a)
-#                     x1, y1, z1 = a[0], a[1], a[2]
-#                     # print(np_array[0].shape)
-#                     # print(np_array[0][x1][y1][z1])
-#                     # print(x1, y1, z1)
-#                     if z1 == 56:
-#                         print(neighbour_list)
-#                         print(a)
-#                         print(z1)
-#                     # print(np_array[0][:,:,56])
-                    
-#                     # print('shape = ', np_array[0].shape)
-#                     if np_array[0][x1][y1][z1] == 1: #if pixel is white
-#                         #get coordinate id
-                        
-#                         id_list.append(id_array[0][x1][y1][z1]) #np.array([x1, y1, z1])
-#                         # print(id_list)
-#                         id_list = [int(i) for i in id_list]
-#                         # loc = np.where((coords_array[:,1:4] == coord).all(axis=1))
-#                         # print(loc[0])
-#                         # for ii in loc[0]:
-#                         #     id_list.append(coords_array[ii,0])
-#                         # print("idlist = ",id_list)
-#                         # loc = np.where((coords_array[1:3] == np.array(a)).all(axis=1))
-#                         #count number of pixels
-#                 # print('it = ', it)
-#                 # print('idlist = ', id_list)
-#                 countamorph = [] #list containing id of voxels that are neighbouring to the current voxel and are amorphous
-#                 countcrys = [] #same as above, except for crystalline
-#                 #find if voxel is amorphous of crystalline
-#                 # print(mat_props[0][1][5])
-#                 for iid in id_list:
-#                     if prop_dict[iid][5] == 1:
-#                         countcrys.append(iid)
-#                     # if mat_props[0][iid][5] == 1: #if crystalline
-#                         # countcrys.append(iid)
-#                     else:
-#                         countamorph.append(iid)
-#                 total_count = len(countcrys) + len(countamorph)
-#                 # print(total_count, len(countamorph), len(countcrys))
-#                 #create a 3D array with current voxel in the middle that is 3x3 and add neighbouring voxels to this array
-#                 prob_matrix = np.zeros(shape=(3,3,3), dtype=float)
-#                 key_matrix = np.zeros(shape=(3,3,3), dtype=int)
-#                 key_matrix[1,1,1] = id_list[0]
-#                 # print(prob_matrix)
-#                 # print(key_matrix)
-#                 prob_matrix[1,1,1] = prob_self*(1/total_count)
-#                 center_id = id_list[0]
-#                 center_coord = coords_dict[center_id]
-#                 center_coord_x = center_coord[0]
-#                 center_coord_y = center_coord[1]
-#                 center_coord_z = center_coord[2]
-#                 # print(id_list[1:])
-#                 for i in id_list[1:]:
-#                     # print(i)
-#                     xx = coords_dict[i]#coords_array[np.where(coords_array[:,0] == i)]
-#                     # print(xx)
-#                     x_x = center_coord_x - xx[0]
-#                     x_y = center_coord_y - xx[1]
-#                     x_z = center_coord_z - xx[2]
-#                     # x_list = [x_x, x_y, x_z]
-#                     key_matrix[1-x_x, 1-x_y, 1-x_z] = i
-#                     # if i == center_id:
-#                     #     prob_matrix[1, 1, 1] = prob_self*(1/total_count)
-#                     if bias == False:
-#                         prob_matrix[1-x_x, 1-x_y, 1-x_z] = (1-(prob_self/total_count))/(total_count-1)
-#                             # print(prob_matrix)
-#                             # print(key_matrix)
-#                     else:
-#                         if i in countamorph:
-#                             # if i == center_id:
-#                             #     pass
-#                             # else:
-#                             if prop_dict[i][5] == 0:
-#                                 prob_matrix[1-x_x, 1-x_y, 1-x_z] = (((prob_self/total_count))/(total_count-1))*prob_amorph*(len(countamorph)-1)
-#                             else:
-#                                 prob_matrix[1-x_x, 1-x_y, 1-x_z] = (((prob_self/total_count))/(total_count-1))*prob_amorph*(len(countamorph))
-#                         elif i in countcrys:
-#                             # if i == center_id:
-#                             #     pass
-#                             # else:
-#                             if prop_dict[i][5] == 1:
-#                                 prob_matrix[1-x_x, 1-x_y, 1-x_z] = ((1-(prob_self/total_count))/(total_count-1)*prob_crys*(len(countcrys)-1))
-#                             else:
-#                                 prob_matrix[1-x_x, 1-x_y, 1-x_z] = ((1-(prob_self/total_count))/(total_count-1)*prob_crys*(len(countcrys)))
-                    
-#                     ## ADD BIAS FOR AMORPHOUS VOXELS
-#                     # if i in countamorph:
-#                     #     if i == center_id:
-#                     #         pass
-#                     #     else:
-#                     #         prob_matrix[1-x_x, 1-x_y, 1-x_z] = (prob_crys*-1*len(countcrys)*0.1 + (1-prob_matrix[1,1,1]))/len(countamorph) # ((1-prob_self*(1/total_count))-(1/(total_count+len(countcrys))))/len(countamorph)#prob_amorph*(1/total_count)
-#                     # elif i in countcrys:
-#                     #     if i == center_id:
-#                     #         pass
-#                     #     else:
-#                     #         prob_matrix[1-x_x, 1-x_y, 1-x_z] = 0.1#((1-prob_self*(1/total_count))-(1/(total_count+len(countamorph))))/len(countcrys)#/(1-len(countcrys))##prob_crys*(1/total_count)
-#                     # else:
-#                     #     pass
-#                     #choice x, choice y, choice z
-#                     # step_array = np.array([-1, 0, 1])
-#                     # print(prob_matrix)
-#                     # print(prob_matrix[1,1,:])
-#                     # choice_x = np.random.choice(step_array, p=prob_matrix[:,1,1])
-#                     # choice_y = np.random.choice(step_array, p=prob_matrix[1,:,1])
-#                     # choice_z = np.random.choice(step_array, p=prob_matrix[1,1,:])
-#                     # print(choice_x,choice_y,choice_z)
-#                 # print(prob_matrix)
-#                 flat_array = np.arange(np.ndarray.flatten(prob_matrix).shape[0])
-#                 # print(flat_array)
-#                 choice = np.random.choice(flat_array, p=np.ndarray.flatten(prob_matrix))
-#                 flat_array = np.reshape(flat_array, (3,3,3))
-#                 n_p = np.where(flat_array==choice)
-#                 next_pixel = np.vstack((n_p[0], n_p[1], n_p[2])).transpose()[0]
-#                 # print(next_pixel)
-#                 # print(key_matrix)
-#                 next_id = key_matrix[next_pixel[0]][next_pixel[1]][next_pixel[2]]
-#                 # print(flat_array)
-#                 # print(next_id)
-#                 for path_item in path_array:
-#                     if path_item[0] == j[0]:
-#                         path_item[t+1] = next_id
-#         t+=1
-#         print("t = ", t)
-
-#     print(path_array)
-#     print(path_array.shape)
-#     # pbar.close()
-#     return path_array
-
-# def iter_comments():
-#                 # print(path_array)
-#                 # print(key_matrix)
-#                 # print(prob_matrix)
-#                 # print(np.sum(prob_matrix))
-                    
-                    
-#                     # for j in (x_x, x_y, x_z):
-#                     #     for k in (x, y, z):
-#                     #         total_list.append(j+k)
-#                     #         total_list.append(j-k)
-#                         # prob_matrix[i-j] = 1/total_count
-#                         # prob_matrx[i+j] = 1/total_count
-#                 # print(total_list)
-#         # print(mat_props)
-#         # for key, value in prop_dict.items():
-#         # for key in sorted(prop_dict.keys()):
-#         #     # print(prop_dict[key])
-#         #     # print(j)
-#         #     # print(key)
-#         #     if prop_dict[key][2] == 1:
-#         #         print(key, prop_dict[key], coords_dict[key])
-#         #         x,y,z = coords_dict[key]
-#         #         print(x,y,z)
-#         #         neighbour_list = neighbours(x,y,z, res=np_array[1])
-#         #         # print(neighbour_list)
-#         #         id_list = []
-#         #         for a in neighbour_list:
-#         #             x1, y1, z1 = a
-#         #             print(x1, y1, z1)
-#         #             if np_array[0][x1, y1, z1] == 1:
-#         #                 for key1, value1 in sorted(coords_dict.items()):
-#         #                     # print('value = ', value1)
-#         #                     if np.all(value1 == [x1, y1, z1]):
-#         #                         id_list.append(key1)
-#         #         print(id_list)
-#         #         #     pass
-#         # t += 1
-        
- 
-
-#         # t+=1
-#                     # print(x_x, x_y, x_z)
-#                     # prob_matrix[]
-#                     # if (x_x < x and x_y < y and x_z < z):
-#                     #     prob_matrix[]
-
-#                 #get id
-#                 # print("probmatrix", prob_matrix)
-
-
-                        
-#                         # for index in coords_array:
-#                         #     if a == coords_array[index][1:3]).all(axis=1))[0]
-#                         # countamorph.append(a)
-#                         # for b, c in enumerate(prop_array):
-#                         #     if c[5] == 1:
-#                         #         pass
-#                         # countcrys.append()                    
-#                                     #match them with coordinates and find out of they are crystalline
-
-#                 # next_coord = random_walk(k[2])
-#                 # if next_coord is None:
-#                 #     k[2] == 2
-#                 # else:
-#                 #     next_coord = random_walk(j[2])
-                
-                    
-#                     # Fick(diff_coeff_mm["37"], i)
-#     # print(input_dir)
-#     # print(output_dir)
-#     return
-
-
-
-    # for j in path[0]:
-    #     for k,l in enumerate(j):
-    #         # for m, n in enumerate(time_array):
-    #             # t = n*604800
-
-    #             # data_dict[l][m+1] = 
-    #         for i,tt in enumerate(time_array):
-    #             t = tt*604800
-    #             #max ratio = 1
-    #             if tt == 0:
-    #                 avg_conc_ratio = 0
-    #             else:
-    #                 avg_conc_ratio = (Fick(diff_coeff_mm["37"], t, c0=None, x=k)+Fick(diff_coeff_mm["37"], tt, c0=None, x=(k+1)))/2
-    #             avg_conc = avg_conc_ratio*water_conc
-    #             conc_dict[l][i+1] = avg_conc
-    #             conc_array[k][i+1] = avg_conc
-    #             print(i, tt, conc_dict[123][tt])
-    #             # if tt == 20:
-    #                 # print(conc_dict[123], '\n', conc_array[123]])
-    #             # avg_conc = water_conc * avg_conc
-    #             # if l == 123:
-    #             #     print(avg_conc_ratio)
-    #             # print(avg_conc)
-    #             # print('conc: ', path[2][l])
-    #             path[2][l][3] = avg_conc #dictionary (used to be +=)
-    #             path[1][0][k][4] = avg_conc #array
-    #             mwt = MwLoss(path[2][l][5], avg_conc, water_conc, average_loss_rate, t)
-    #             data_dict[l][i+1] = mwt
-    #             data_array[k][i+1] = mwt
-                # data_dict[l].append(mwt)
-                # if l == 123:
-                    # print(data_dict[123])
-    # for i in tqdm(time_array):
-    #     t = i*604800
-    #     print('timepoint: ', i)
-    #     # print('\ndictionary: ', path[2][0])
-    #     # print('\narray: ', path[1][0][0])
-    #     for j in path[0]:
-    #         for k,l in enumerate(j):
-    #             avg_conc = Fick(diff_coeff_mm["37"], t, c0=water_conc, x=k)+Fick(diff_coeff_mm["37"], t, c0=water_conc, x=(k+1))
-    #             # print(avg_conc)
-    #             # print('conc: ', path[2][l])
-    #             path[2][l][3] += avg_conc #dictionary
-    #             path[1][0][k][4] += avg_conc #array
-    #             mwt = MwLoss(path[2][l][5], avg_conc, water_conc, average_loss_rate, t)
-    #             data_dict[l].append(mwt)
-    #             if l == 123:
-    #                 print(data_dict[123])
-    #             # path[2][l][5] = mwt
-    #             # path[1][0][k][6] = mwt
-    #             # Fick(diff, i*604800, c0=water_conc, x=path[2])
-    # # print(data_dict[123])
-    # print(len(data_dict[123]), len(time_array))
-    # print('concentration: ', conc_dict[9])
-    # print(len(conc_dict[9]))
-    # print('mw data: ', data_dict[9])
-    #create a 4D array with t 3D array containing mw data
-    # print(data_array[123])
