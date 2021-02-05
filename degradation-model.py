@@ -743,7 +743,7 @@ if __name__ == "__main__":
     # print(mat_props[0])
     print('# adjacent = ', num_adj)
 
-    time_array = np.arange(start=0, stop=4, step=2)
+    time_array = np.arange(start=0, stop=20, step=2)
     print('# timepoints: ', time_array.shape[0], '\ntimepoints: ', time_array)
     
     diff_coeff = {"25": 51.7e-12, "37": 67.6e-12, "50": 165e-12} #x10^(-12) m^2/s
@@ -757,7 +757,7 @@ if __name__ == "__main__":
     gradtypelist = ['lin']#, 'exp', 'log', 'quad']
     for gradtype1 in gradtypelist:
         print('calculating Mw data...')
-        mw_data = MwLossData("37", path, time_array, gradtype=gradtype1, time_array_units='weeks')
+        mw_data = MwLossData("37", path, time_array, gradtype=gradtype1, time_array_units='days')
         mw_data_array = idarr[0]
         avg_mw = [np.average(mw_data[1][:,i]) for i in np.arange(1, time_array.shape[0]+1)]
         print("Avg Mw: ", avg_mw)
@@ -778,7 +778,7 @@ if __name__ == "__main__":
     for tindex, t in enumerate(time_array):
         for i in coords:
             x,y,z = i[1:4]
-            conc_data_array_time[tindex][x,y,z] = 1+mw_data[-1][i[0]][tindex]
+            conc_data_array_time[tindex][x,y,z] = mw_data[-1][i[0]][tindex]
     # for i in mw_data[-1].keys():
     #     for tindex, t in enumerate(time_array):
     #         loc = np.where(conc_data_array_time[tindex] == i)
@@ -796,14 +796,25 @@ if __name__ == "__main__":
     #Calculate Molecular Weight
 
     # print(idarr[0].shape)
-    vol = vedo.Volume(conc_data_array_time[1])
-    vol.addScalarBar3D()
+    # vedo.show(conc_data_array_time[0], interactive=0)
+    
+    vp = vedo.Plotter(axes=1)
+    vol = vedo.Volume(conc_data_array_time[0])
+    lego = vol.legosurface(vmin=0, vmax=1)
+    vp += lego
+    
+    for i in np.arange(start = 0, stop = time_array.shape[0], step=1):
+        
+        vol = vedo.Volume(conc_data_array_time[index])
+        # vol.addScalarBar3D()
 
-    lego = vol.legosurface(vmin=1.9, vmax=2)
-    lego.addScalarBar3D()
+        lego = vol.legosurface(vmin=0, vmax=1)
+        # lego.addScalarBar3D()
+        vp.show()
     # text1 = vedo.Text2D('Make a Volume from numpy.mgrid', c='blue')
     # text2 = vedo.Text2D('its lego isosurface representation\nvmin=1, vmax=2', c='dr')
-    vedo.show(lego, axes=1)
+    # vedo.show(lego, axes=1, interactive=1)
+    # vedo.interactive()
     # vedo.show([(vol,text1), (lego,text2)], N=2, azimuth=10)
     # vedo.show(lego,axes=1)
     # for i in mw_data_array:
