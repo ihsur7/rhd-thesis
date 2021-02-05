@@ -1,4 +1,6 @@
 from sys import path
+
+from numpy.lib.function_base import average
 import pydirectory as pyd
 import open3d as otd
 # from open3d import *
@@ -20,6 +22,7 @@ import uuid
 from tqdm import tqdm
 from collections import Counter
 import vedo
+import itertools
 
 class Presets:
     def __init__(self, led):
@@ -535,10 +538,10 @@ def iter_path(max_steps, coords_array, prop_array, np_array, id_array, path_arra
     #     dupe_list = [k for k,v in Counter(i).items() if v>1]
 
     # print(dupe_list)
-    np.save(output_dir+'path_array', np.asarray_chkfinite((path_array, prop_array, prop_dict, coords_dict)), allow_pickle=True)
+    np.save(output_dir+'path_array', np.asarray_chkfinite((path_array, prop_array, prop_dict, coords_dict, np_array, id_array)), allow_pickle=True)
     print('paths saved...')
     # np.save(output_dir+'prop_array', prop_array)
-    return path_array, prop_array, prop_dict, coords_dict
+    return path_array, prop_array, prop_dict, coords_dict, np_array, id_array
 
 
 
@@ -560,7 +563,7 @@ def Fick(diff, t, c0 = None, x=1):
     #     return 1
 
 
-def MwLossData(temp, path, time_array, gradtype='linear'):
+def MwLossData(temp, path, time_array, gradtype='linear', time_array_units = 'weeks'):
     # loss_rate= [0.001776, 0.002112, 0.002527] #ln, in weeks too high, may need to be in seconds
     loss_rate = [4.900e-008, 4.737e-008, 4.262e-008] #ln, in seconds
     # loss_rate = [0.0007610, 0.0008171, 0.001194]
@@ -587,23 +590,35 @@ def MwLossData(temp, path, time_array, gradtype='linear'):
 
     conc_array = np.c_[conc_array, np.zeros(shape=(conc_array.shape[0], time_array.shape[0]))]
 
+    conc_data_dict_1 = {k[0]: np.zeros(shape=time_array.shape[0]) for k in path[1][0]}
+
     for i in data_array:
         i[1] = path[2][i[0]][5]
     for j in conc_array:
         j[1] = path[2][j[0]][3]
     data_dict = {i[0]: i[1:] for i in data_array}
     conc_dict = {j[0]: j[1:] for j in conc_array}
-
     for tindex, t in enumerate(tqdm(time_array)):
         for p in path[0]:
             for index, q in enumerate(p):
-                tt = t*604800 #weeks in seconds
+                if time_array_units == 'weeks':
+                    tt = t*604800 #weeks in seconds
+                elif time_array_units == 'days':
+                    tt = t*(604800/7)
+                elif time_array_units == 'hours':
+                    tt = t*3600
+                elif time_array_units == 'minutes':
+                    tt = t*60
+                else:
+                    tt = t
                 if t == 0:
                     avg_conc_ratio = 0
                 else:
                     # print((index+1)*pixel_scale)
                     avg_conc_ratio = (Fick(diff_coeff_mm["37"], tt, c0=None, x=index*pixel_scale) + Fick(diff_coeff_mm["37"], tt, c0=None, x=(index+1)*pixel_scale))/2
-
+                    conc_data_dict_1[q][tindex] = avg_conc_ratio
+                    # if index*pixel_scale == 14*pixel_scale:
+                    #     print(avg_conc_ratio)
                 avg_conc = avg_conc_ratio*water_conc
                 # if q == 9:
                 #     print(avg_conc_ratio, avg_conc)
@@ -640,8 +655,32 @@ def MwLossData(temp, path, time_array, gradtype='linear'):
                 data_array[index][tindex+1] = mwt
                 # print(data_dict[q], data_dict[q][tindex])
                 # print(data_array[index], data_array[index][tindex+1])
+    # print(conc_data_dict_1[123])
+    # conc_data_array = path[-1][0]
+    # print(conc_data_array)
+    # print('conc time array: ', conc_data_array_time.shape)
+    # for i in conc_data_dict_1.keys():
+    #     for tindex, t in enumerate(conc_data_array_time):
+    #         loc = np.where(t == i)
+    #         loc_arr = np.vstack((loc[0], loc[1], loc[2])).transpose()
+    #         for loc1 in loc_arr:
+    #             t[loc1[0]][loc1[1]][loc1[2]] = i[tindex]
+    # print(conc_data_array_time)
+    # for i in conc_data_array:
+    #     for j in i:
+    #         for k in j:
+    #             for l in k:
+    #                 k = conc_data_dict_1[k]
+        # np.where(conc_data_dict_1[])
 
-    return path, data_array, data_dict
+    # print(conc_data_array_time)
+    # for i in conc_data_array:
+    #     for j in i:
+    #         for k in j:
+    #             k = conc_dict[]
+    np.save(output_dir+'data_array'+'_'+gradtype, data_array, allow_pickle=True)
+    # np.save(output_dir+'conc_ratio'+'_'+gradtype, conc_data_array, allow_pickle=True)
+    return path, data_array, data_dict, conc_dict
 
 def AssignMw(led):
     if str.lower(led) == "high":
@@ -653,20 +692,10 @@ def AssignMw(led):
     else:
         return "unknown LED"
 
-def MolecularWeight(mw0, lmda, t):
-    return mw0*math.exp(-lmda*t)
 
 def Modulus(n):
     k_b = 1.38064852e-23 #m^2 kg s^-2 K^-1
     return 3*n*k_b*310.15
-
-def AssignXc(led):
-    # def init_crystallinity(self, chi):
-    #     # crystallinity = probability a pixel will be crystalline
-    #     bin_prob = np.random.binomial(1, chi)
-    #     return 1 if bin_prob == 1 else 0
-    bin_prob = np.random.binomial(1, chi)
-    return 1 if bin_prob == 1 else 0
     
 
 if __name__ == "__main__":
@@ -691,7 +720,7 @@ if __name__ == "__main__":
     props = a.matprops_array(numprops=8)
     nparr = a.to_numpy()
     idarr = a.vox_id()
-
+    
     if props.shape[0] != path[1][0].shape[0]:
         print('file does not match... creating new data')
 
@@ -701,7 +730,12 @@ if __name__ == "__main__":
     else:
         print('file matches input data')
     #Set up model and metadata
-
+    # path_ln = []
+    # for i in path[0]:
+    #     path_ln.append(i.shape[0])
+    # print(path_ln)
+    print(path[0][0].shape)
+    # print('Avg. Path Length: ', np.average(path_ln))
     print('model resolution = ', nparr[0].shape)
     print('# polymer voxels = ', coords.shape)
     #25 = 211.88 seconds on macbook, ~50k paths (flow vectors)
@@ -709,7 +743,7 @@ if __name__ == "__main__":
     # print(mat_props[0])
     print('# adjacent = ', num_adj)
 
-    time_array = np.arange(start=0, stop=21, step=1)
+    time_array = np.arange(start=0, stop=4, step=2)
     print('# timepoints: ', time_array.shape[0], '\ntimepoints: ', time_array)
     
     diff_coeff = {"25": 51.7e-12, "37": 67.6e-12, "50": 165e-12} #x10^(-12) m^2/s
@@ -720,10 +754,10 @@ if __name__ == "__main__":
     # iter_fick(300, temp, pixel_scale, coords, mat_props, nparr, idarr, flowpath)
 
     #Calculate Flowpath
-    gradtypelist = ['lin', 'exp', 'log', 'quad']
+    gradtypelist = ['lin']#, 'exp', 'log', 'quad']
     for gradtype1 in gradtypelist:
         print('calculating Mw data...')
-        mw_data = MwLossData("37", path, time_array, gradtype=gradtype1)
+        mw_data = MwLossData("37", path, time_array, gradtype=gradtype1, time_array_units='weeks')
         mw_data_array = idarr[0]
         avg_mw = [np.average(mw_data[1][:,i]) for i in np.arange(1, time_array.shape[0]+1)]
         print("Avg Mw: ", avg_mw)
@@ -736,30 +770,49 @@ if __name__ == "__main__":
             save_array[index][1] = avg_mw[index]
         pd.DataFrame(save_array).to_csv(output_dir+'mw_data'+'_'+gradtype1+'.csv')
         print('saved.')
+
+
+    conc_data_array_time = np.asarray_chkfinite(list(itertools.repeat(idarr[0], time_array.shape[0])))
+
+    # conc_data = np.zeros(shape=conc_data_array_time.shape)
+    for tindex, t in enumerate(time_array):
+        for i in coords:
+            x,y,z = i[1:4]
+            conc_data_array_time[tindex][x,y,z] = 1+mw_data[-1][i[0]][tindex]
+    # for i in mw_data[-1].keys():
+    #     for tindex, t in enumerate(time_array):
+    #         loc = np.where(conc_data_array_time[tindex] == i)
+    #         loc_arr = np.vstack((loc[0], loc[1], loc[2])).transpose()
+    #         print(loc_arr)
+    #         conc_data[loc[0]][loc[1]][loc[2]] = mw_data[-1][i][tindex]
+    # print(conc_data_array_time)
+    # for t in conc_data_array_time:
+    #     for t1 in conc_data:
+    #         mw_data[-1][]
     # gradtype1 = 'exp'
     
     # print('# paths = ', flowpath.shape)
 
     #Calculate Molecular Weight
 
-
-
     # print(idarr[0].shape)
-    # vol = vedo.Volume(idarr[0])
-    # vol.addScalarBar3D()
+    vol = vedo.Volume(conc_data_array_time[1])
+    vol.addScalarBar3D()
 
-
-
+    lego = vol.legosurface(vmin=1.9, vmax=2)
+    lego.addScalarBar3D()
+    # text1 = vedo.Text2D('Make a Volume from numpy.mgrid', c='blue')
+    # text2 = vedo.Text2D('its lego isosurface representation\nvmin=1, vmax=2', c='dr')
+    vedo.show(lego, axes=1)
+    # vedo.show([(vol,text1), (lego,text2)], N=2, azimuth=10)
+    # vedo.show(lego,axes=1)
     # for i in mw_data_array:
     #     for j in i:
     #         for k in j:
     #             k = mw_data[1][k][1]
         
 
-    # lego = vol.legosurface(vmin=1, vmax=coords.shape[0])
-    # lego.addScalarBar3D()
-    # text1 = vedo.Text2D('Make a Volume from numpy.mgrid', c='blue')
-    # text2 = vedo.Text2D('its lego isosurface representation\nvmin=1, vmax=2', c='dr')
+
     # print(mw_data[1][123])
     
 
@@ -768,5 +821,4 @@ if __name__ == "__main__":
     #     vol.getPointArray().shape, 
     #     vol.getDataArray().shape)
 
-    # vedo.show([(vol,text1), (lego,text2)], N=2, azimuth=10)
-    # vedo.show(lego,axes=1)
+
