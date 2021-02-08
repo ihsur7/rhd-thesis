@@ -1,3 +1,4 @@
+from functools import cmp_to_key
 from sys import path
 
 from numpy.lib.function_base import average
@@ -51,6 +52,8 @@ class Voxelize:
         # print(arr.shape)
         for i, j in enumerate(os.listdir(self.directory)):
             arr[:, :, i] = np.asarray(Image.open(self.directory + j), dtype=bool)
+
+
         return arr, res1
 
     def coord_array(self):
@@ -609,44 +612,54 @@ def MwLossData(temp, path, time_array, gradtype='linear', time_array_units = 'we
                     tt = t*3600
                 elif time_array_units == 'minutes':
                     tt = t*60
-                else:
+                elif time_array_units == 'seconds':
                     tt = t
+                else:
+                    print('Unknown time units')
+                    break
                 if t == 0:
-                    avg_conc_ratio = 0
+                    avg_conc = 0
                 else:
                     # print((index+1)*pixel_scale)
-                    avg_conc_ratio = (Fick(diff_coeff_mm["37"], tt, c0=None, x=index*pixel_scale) + Fick(diff_coeff_mm["37"], tt, c0=None, x=(index+1)*pixel_scale))/2
-                    conc_data_dict_1[q][tindex] = avg_conc_ratio
+                    avg_conc = (Fick(diff_coeff_mm["37"], tt, c0=water_conc, x=index*pixel_scale) + Fick(diff_coeff_mm["37"], tt, c0=water_conc, x=(index+1)*pixel_scale))/2
                     # if index*pixel_scale == 14*pixel_scale:
+                    # if tindex == 1:
+                    #     if q == 123:
+                    #         print(avg_conc, index,pixel_scale, tt)
+
                     #     print(avg_conc_ratio)
-                avg_conc = avg_conc_ratio*water_conc
+                total_conc = math.sqrt((avg_conc**2)+(path[2][q][3]**2))
+                total_conc_ratio = total_conc/water_conc
                 # if q == 9:
                 #     print(avg_conc_ratio, avg_conc)
                 #     print(conc_dict[9])
-                conc_dict[q][tindex] = avg_conc_ratio
-                conc_array[index][tindex+1] = avg_conc_ratio
+                conc_dict[q][tindex] = total_conc_ratio
+                conc_array[index][tindex+1] = total_conc_ratio
 
-                path[2][q][3] = avg_conc
-                path[1][0][index+1][4] = avg_conc
+                path[2][q][3] = total_conc_ratio
+                path[1][0][index+1][4] = total_conc_ratio
                 # print(path[2][q][5])
+                conc_data_dict_1[q][tindex] += total_conc_ratio
                 
                 if gradtype == "linear":
-                    multiplier = avg_conc_ratio
+                    multiplier = total_conc_ratio
                     # grad = loss_rate_calc(average_loss_rate, avg_conc_ratio)
                 elif gradtype == "exp":
                     a = 0.05
-                    multiplier = a*math.e**(math.log((1/a)+1)*avg_conc_ratio)-1
+                    multiplier = a*math.e**(math.log((1/a)+1)*total_conc_ratio)-1
                 elif gradtype == 'log':
-                    multiplier = (1/math.log10(2))*math.log10(avg_conc_ratio+1)
+                    multiplier = (1/math.log10(2))*math.log10(total_conc_ratio+1)
                 elif gradtype == 'quad':
                     a = -1
                     b = 1
                     c = 1
-                    multiplier = a*(avg_conc_ratio**2) + b*avg_conc_ratio + c
+                    multiplier = a*(total_conc_ratio**2) + b*total_conc_ratio + c
                 else:
                     multiplier = 1
-                    
-                loss_rate = average_loss_rate*multiplier
+                loss_rate = average_loss_rate**multiplier
+
+                if path[2][q][4] == 1:
+                    loss_rate *= loss_rate
                 # loss_rate = average_loss_rate**
                 mwt = path[2][q][5]*math.e**(-1*(loss_rate)*tt)
                 # mwt = MwLoss(path[2][q][5], avg_conc, water_conc, average_loss_rate, tt)
@@ -717,8 +730,11 @@ if __name__ == "__main__":
     num_adj = np.where(path[1][0][:,3] == 1)[0].shape
     a = Voxelize(input_dir)
     coords = a.coord_array()
+    # print(pd.DataFrame(coords[:,1:4]))
     props = a.matprops_array(numprops=8)
     nparr = a.to_numpy()
+
+    # print(nparr)
     idarr = a.vox_id()
     
     if props.shape[0] != path[1][0].shape[0]:
@@ -743,7 +759,7 @@ if __name__ == "__main__":
     # print(mat_props[0])
     print('# adjacent = ', num_adj)
 
-    time_array = np.arange(start=0, stop=20, step=2)
+    time_array = np.arange(start=0, stop=21, step=1)
     print('# timepoints: ', time_array.shape[0], '\ntimepoints: ', time_array)
     
     diff_coeff = {"25": 51.7e-12, "37": 67.6e-12, "50": 165e-12} #x10^(-12) m^2/s
@@ -754,10 +770,11 @@ if __name__ == "__main__":
     # iter_fick(300, temp, pixel_scale, coords, mat_props, nparr, idarr, flowpath)
 
     #Calculate Flowpath
-    gradtypelist = ['lin']#, 'exp', 'log', 'quad']
+    gradtypelist = ['lin', 'exp', 'log', 'quad']
+    tmu = 'weeks'
     for gradtype1 in gradtypelist:
         print('calculating Mw data...')
-        mw_data = MwLossData("37", path, time_array, gradtype=gradtype1, time_array_units='days')
+        mw_data = MwLossData("37", path, time_array, gradtype=gradtype1, time_array_units=tmu)
         mw_data_array = idarr[0]
         avg_mw = [np.average(mw_data[1][:,i]) for i in np.arange(1, time_array.shape[0]+1)]
         print("Avg Mw: ", avg_mw)
@@ -797,20 +814,43 @@ if __name__ == "__main__":
 
     # print(idarr[0].shape)
     # vedo.show(conc_data_array_time[0], interactive=0)
+    # df = pd.DataFrame({'x': coords[:,1], 'y': coords[:,2], 'z': coords[:,3]})
+    # pcd = PyntCloud(df).to_instance('open3d')
+    # pcd.colors = otd.utility.Vector3dVector(conc_data_array_time[1])
+    # pc = otd.geometry.VoxelGrid.create_from_point_cloud(pcd, voxel_size=1)
+    # otd.visualization.draw_geometries([pc])
+    loc = np.where(nparr[0] == 0)
+    loc_arr = np.vstack((loc[0], loc[1], loc[2])).transpose()
+    for i in loc_arr:
+        x,y,z = i[0], i[1], i[2]
+        for j in conc_data_array_time:
+            j[x,y,z] = -1
+    vp = vedo.Plotter(axes=0, interactive=0)
     
-    vp = vedo.Plotter(axes=1)
-    vol = vedo.Volume(conc_data_array_time[0])
-    lego = vol.legosurface(vmin=0, vmax=1)
-    vp += lego
-    
-    for i in np.arange(start = 0, stop = time_array.shape[0], step=1):
-        
-        vol = vedo.Volume(conc_data_array_time[index])
-        # vol.addScalarBar3D()
+    pb = vedo.ProgressBar(0, time_array.shape[0])
 
-        lego = vol.legosurface(vmin=0, vmax=1)
-        # lego.addScalarBar3D()
+    for i in pb.range():
+        vol = vedo.Volume(conc_data_array_time[i], c=('r','w','b'), alpha=(0,0.5,0.8,1))
+        lego = vol.legosurface(vmin=0, vmax=1,cmap='bwr_r').alpha(0.5)
+        lego.addScalarBar()
+        vp+=lego
         vp.show()
+        # pb.print()
+        # print(conc_data_array_time[i])
+    print(conc_data_array_time[-1])
+    vp.show(interactive=1)
+    # vol = vedo.Volume(conc_data_array_time[0])
+    # lego = vol.legosurface(vmin=0, vmax=1)
+    # vp += lego
+    
+    # for i in np.arange(start = 0, stop = time_array.shape[0], step=1):
+        
+    #     vol = vedo.Volume(conc_data_array_time[i])
+    #     # vol.addScalarBar3D()
+
+    #     lego = vol.legosurface(vmin=0, vmax=1)
+    #     # lego.addScalarBar3D()
+    #     vp.show()
     # text1 = vedo.Text2D('Make a Volume from numpy.mgrid', c='blue')
     # text2 = vedo.Text2D('its lego isosurface representation\nvmin=1, vmax=2', c='dr')
     # vedo.show(lego, axes=1, interactive=1)

@@ -1,4 +1,5 @@
 import math
+import numpy as np
 # t = 1
 # while t > 0:
 #     conc_ratio = math.erfc(1/math.sqrt(4*67.6e-5*t))
@@ -8,5 +9,7 @@ import math
 #     else:
 #         t += 10000000
 t = 1e8
-conc_ratio = math.erfc((14*(0.25*35)/math.sqrt(4*67.6e-5*t)))
+conc_ratio = math.erfc((17*0.00714/math.sqrt(4*67.6e-5*2)))
 print(conc_ratio)
+# N = 4
+# print(np.random.uniform(0, 1, size=(N, 3)))
