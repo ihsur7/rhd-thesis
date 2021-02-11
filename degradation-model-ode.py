@@ -644,29 +644,29 @@ def MwLossData(temp, path, time_array, gradtype='linear', time_array_units = 'we
                 if gradtype == "linear":
                     # multiplier = total_conc_ratio
                     # grad = loss_rate_calc(average_loss_rate, avg_conc_ratio)
-                    loss_rate = (total_conc_ratio**3)/6
+                    average_loss_rate = (total_conc_ratio**3)/6
                 elif gradtype == "exp":
                     # a = 0.05
                     # multiplier = a*math.e**(math.log((1/a)+1)*total_conc_ratio)-1
-                    loss_rate = -0.5*total_conc_ratio**2 + 0.983333*total_conc_ratio + 0.00555556*math.e**(3*total_conc_ratio) - 0.00555556
+                    average_loss_rate = -0.5*total_conc_ratio**2 + 0.983333*total_conc_ratio + 0.00555556*math.e**(3*total_conc_ratio) - 0.00555556
                 elif gradtype == 'log':
                     # multiplier = (1/math.log10(2))*math.log10(total_conc_ratio+1)
-                    loss_rate = (2*(total_conc_ratio + 1)**2 *math.log(total_conc_ratio + 1) - total_conc_ratio (3*total_conc_ratio + 2))/math.log(16)
+                    average_loss_rate = (2*(total_conc_ratio + 1)**2 *math.log(total_conc_ratio + 1) - total_conc_ratio*(3*total_conc_ratio + 2))/math.log(16)
                 elif gradtype == 'quad':
                     # a = -1
                     # b = 1
                     # c = 1
                     # multiplier = a*(total_conc_ratio**2) + b*total_conc_ratio + c
-                    loss_rate = (-1/12)*(total_conc_ratio - 4)*total_conc_ratio**3
+                    average_loss_rate = (-1/12)*(total_conc_ratio - 4)*total_conc_ratio**3
                 else:
                     multiplier = 1
-                print(loss_rate)
+                # print(loss_rate)
                 # loss_rate = average_loss_rate**multiplier
 
                 # if path[2][q][4] == 1:
                 #     loss_rate *= loss_rate
                 # loss_rate = average_loss_rate**
-                mwt = path[2][q][5]*math.e**(-1*(loss_rate)*tt)
+                mwt = path[2][q][5]*math.e**(-1*(average_loss_rate)*tt)
                 # mwt = MwLoss(path[2][q][5], avg_conc, water_conc, average_loss_rate, tt)
                 # print(tindex)
                 data_dict[q][tindex] = mwt
