@@ -710,6 +710,19 @@ def AssignMw(led):
 def Modulus(n):
     k_b = 1.38064852e-23 #m^2 kg s^-2 K^-1
     return 3*n*k_b*310.15
+
+def Visualise(model, scalar=None):
+    pv.set_plot_theme('dark')
+
+    pcloud = pv.PolyData(model)
+    pcloud['radius'] = np.asarray([1]*coords.shape[0])
+    geom1 = pv.Cube()
+    # geom = pv.Sphere(theta_resolution=8, phi_resolution=8)
+    glyphed = pcloud.glyph(scale="radius", geom=geom1) # progress_bar=True)
+
+    p = pv.Plotter(notebook=False)
+    p.add_mesh(glyphed, color='white', show_edges=True, edge_color='black')
+    p.show()
     
 
 if __name__ == "__main__":
