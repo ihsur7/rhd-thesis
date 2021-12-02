@@ -777,7 +777,7 @@ if __name__ == "__main__":
     #Calculate Flowpath
     gradtypelist = ['lin', 'exp', 'log', 'quad']
     tmu = 'weeks'
-    for gradtype1 in gradtypelist:
+    for gradtype1 in gradtypelist[0:1]:
         print('calculating Mw data...')
         mw_data = MwLossData("37", path, time_array, gradtype=gradtype1, time_array_units=tmu)
         mw_data_array = idarr[0]
@@ -786,12 +786,12 @@ if __name__ == "__main__":
         save_array = np.zeros(shape=(time_array.shape[0], 2))
         # print(save_array.shape)
         # print(save_array)
-        print('saving Avg. Mw data...')
-        for index, i in enumerate(time_array):
-            save_array[index][0] = i
-            save_array[index][1] = avg_mw[index]
-        pd.DataFrame(save_array).to_csv(output_dir+'mw_data'+'_'+gradtype1+'.csv')
-        print('saved.')
+        # print('saving Avg. Mw data...')
+        # for index, i in enumerate(time_array):
+        #     save_array[index][0] = i
+        #     save_array[index][1] = avg_mw[index]
+        # pd.DataFrame(save_array).to_csv(output_dir+'mw_data'+'_'+gradtype1+'.csv')
+        # print('saved.')
 
 
     conc_data_array_time = np.asarray_chkfinite(list(itertools.repeat(idarr[0], time_array.shape[0])))

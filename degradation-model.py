@@ -566,11 +566,12 @@ def Fick(diff, t, c0 = None, x=1):
     #     return 1
 
 
-def MwLossData(temp, path, time_array, gradtype='linear', time_array_units = 'weeks'):
+def MwLossData(temp, path, time_array, gradtype='lin', time_array_units = 'weeks'):
     # loss_rate= [0.001776, 0.002112, 0.002527] #ln, in weeks too high, may need to be in seconds
     loss_rate = [4.900e-008, 4.737e-008, 4.262e-008] #ln, in seconds
     # loss_rate = [0.0007610, 0.0008171, 0.001194]
-    # loss_rate = [0.0002538, 0.0003017, 0.0003611] #ln, in days    
+    # loss_rate = [0.0002538, 0.0003017, 0.0003611] #ln, in days   
+    print("gradtype = ", gradtype) 
     average_loss_rate = np.average(loss_rate)
     print("Avg. Loss Rate: ", average_loss_rate)
     pha_density = 0.00124 #g/mm3 #1.240 * (1/1000**2) #g/m3
@@ -641,7 +642,7 @@ def MwLossData(temp, path, time_array, gradtype='linear', time_array_units = 'we
                 # print(path[2][q][5])
                 conc_data_dict_1[q][tindex] += total_conc_ratio
                 
-                if gradtype == "linear":
+                if gradtype == "lin":
                     multiplier = total_conc_ratio
                     # grad = loss_rate_calc(average_loss_rate, avg_conc_ratio)
                 elif gradtype == "exp":
@@ -759,7 +760,7 @@ if __name__ == "__main__":
     # print(mat_props[0])
     print('# adjacent = ', num_adj)
 
-    time_array = np.arange(start=0, stop=21, step=1)
+    time_array = np.arange(start=0, stop=3, step=1)
     print('# timepoints: ', time_array.shape[0], '\ntimepoints: ', time_array)
     
     diff_coeff = {"25": 51.7e-12, "37": 67.6e-12, "50": 165e-12} #x10^(-12) m^2/s
@@ -770,11 +771,29 @@ if __name__ == "__main__":
     # iter_fick(300, temp, pixel_scale, coords, mat_props, nparr, idarr, flowpath)
 
     #Calculate Flowpath
+    calcALL = False
     gradtypelist = ['lin', 'exp', 'log', 'quad']
     tmu = 'weeks'
-    for gradtype1 in gradtypelist:
+    gtype = 'lin' #default = lin
+    if calcALL:
+        for gradtype1 in gradtypelist:
+            print('calculating Mw data...')
+            mw_data = MwLossData("37", path, time_array, gradtype=gradtype1, time_array_units=tmu)
+            mw_data_array = idarr[0]
+            avg_mw = [np.average(mw_data[1][:,i]) for i in np.arange(1, time_array.shape[0]+1)]
+            print("Avg Mw: ", avg_mw)
+            save_array = np.zeros(shape=(time_array.shape[0], 2))
+            # print(save_array.shape)
+            # print(save_array)
+            print('saving Avg. Mw data...')
+            for index, i in enumerate(time_array):
+                save_array[index][0] = i
+                save_array[index][1] = avg_mw[index]
+            pd.DataFrame(save_array).to_csv(output_dir+'mw_data'+'_'+gradtype1+'.csv')
+            print('saved.')
+    else:
         print('calculating Mw data...')
-        mw_data = MwLossData("37", path, time_array, gradtype=gradtype1, time_array_units=tmu)
+        mw_data = MwLossData("37", path, time_array, gradtype=gtype, time_array_units=tmu)
         mw_data_array = idarr[0]
         avg_mw = [np.average(mw_data[1][:,i]) for i in np.arange(1, time_array.shape[0]+1)]
         print("Avg Mw: ", avg_mw)
@@ -785,9 +804,8 @@ if __name__ == "__main__":
         for index, i in enumerate(time_array):
             save_array[index][0] = i
             save_array[index][1] = avg_mw[index]
-        pd.DataFrame(save_array).to_csv(output_dir+'mw_data'+'_'+gradtype1+'.csv')
+        pd.DataFrame(save_array).to_csv(output_dir+'mw_data'+'_'+gtype+'.csv')
         print('saved.')
-
 
     conc_data_array_time = np.asarray_chkfinite(list(itertools.repeat(idarr[0], time_array.shape[0])))
 
@@ -833,11 +851,11 @@ if __name__ == "__main__":
         vol = vedo.Volume(conc_data_array_time[i], c=('r','w','b'), alpha=(0,0.5,0.8,1))
         lego = vol.legosurface(vmin=0, vmax=1,cmap='bwr_r').alpha(0.5)
         lego.addScalarBar()
-        vp+=lego
+        vp=lego
         vp.show()
         # pb.print()
         # print(conc_data_array_time[i])
-    print(conc_data_array_time[-1])
+    # print(conc_data_array_time[-1])
     vp.show(interactive=1)
     # vol = vedo.Volume(conc_data_array_time[0])
     # lego = vol.legosurface(vmin=0, vmax=1)
