@@ -96,7 +96,12 @@ class Voxelize:
 
 in_dir = "/data/sample1/50/"
 
-input_dir = pyd.Directory(in_dir).InputDIR()
+out_dir = "/data/deg_test_output/"
+
+dirr = pyd.Directory(in_dir, out_dir)
+
+input_dir = dirr.InputDIR()
+output_dir = dirr.OutputDIR()
 
 a = Voxelize(input_dir)
 coords_id = a.coord_array()
@@ -113,7 +118,12 @@ glyphed = pcloud.glyph(scale="radius", geom=geom1) # progress_bar=True)
 
 p = pv.Plotter(notebook=False)
 p.add_mesh(glyphed, color='white', show_edges=True, edge_color='black')
-p.show()
+# p.show()
+
+darray = np.load(output_dir+"data_array_lin.npy")
+print(darray)
+print(darray.shape)
+
 
 # print(pcloud)
 # pcloud.plot(eye_dome_lighting=True, render_points_as_spheres=True)

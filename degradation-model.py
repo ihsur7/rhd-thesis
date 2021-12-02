@@ -715,15 +715,23 @@ def Visualise(model, scalar=None):
     pv.set_plot_theme('dark')
 
     pcloud = pv.PolyData(model)
+    # print(pcloud.n_points())
     pcloud['radius'] = np.asarray([1]*coords.shape[0])
+
     geom1 = pv.Cube()
     # geom = pv.Sphere(theta_resolution=8, phi_resolution=8)
     glyphed = pcloud.glyph(scale="radius", geom=geom1) # progress_bar=True)
+    pcloud.point_data['scalars'] = scalar
+    pcloud.set_active_scalars('scalars')
+    # print(glyphed.n_points())
+    
 
     p = pv.Plotter(notebook=False)
-    p.add_mesh(glyphed, color='white', show_edges=True, edge_color='black')
+    p.add_mesh(glyphed, show_edges=True, edge_color='black', scalars='scalars')
+    print(pcloud)
+    # print(p.n_points())
     p.show()
-    
+    #https://github.com/pyvista/pyvista-support/issues/346
 
 if __name__ == "__main__":
     print('numpy version = ', np.__version__)
@@ -773,7 +781,7 @@ if __name__ == "__main__":
     # print(mat_props[0])
     print('# adjacent = ', num_adj)
 
-    time_array = np.arange(start=0, stop=3, step=1)
+    time_array = np.arange(start=0, stop=2, step=1)
     print('# timepoints: ', time_array.shape[0], '\ntimepoints: ', time_array)
     
     diff_coeff = {"25": 51.7e-12, "37": 67.6e-12, "50": 165e-12} #x10^(-12) m^2/s
@@ -819,14 +827,22 @@ if __name__ == "__main__":
             save_array[index][1] = avg_mw[index]
         pd.DataFrame(save_array).to_csv(output_dir+'mw_data'+'_'+gtype+'.csv')
         print('saved.')
-
+    print(mw_data[1].shape)
     conc_data_array_time = np.asarray_chkfinite(list(itertools.repeat(idarr[0], time_array.shape[0])))
-
+    print(conc_data_array_time.shape)
     # conc_data = np.zeros(shape=conc_data_array_time.shape)
     for tindex, t in enumerate(time_array):
         for i in coords:
             x,y,z = i[1:4]
             conc_data_array_time[tindex][x,y,z] = mw_data[-1][i[0]][tindex]
+    coord = np.delete(coords,0,1)
+    print(coord.shape)
+    print(coords)
+    print(mw_data_array.shape)
+    time = 0
+    mw_data_time = mw_data[1]
+    print(mw_data_time[:,1])
+    Visualise(coord, scalar=mw_data_time[:,1])
     # for i in mw_data[-1].keys():
     #     for tindex, t in enumerate(time_array):
     #         loc = np.where(conc_data_array_time[tindex] == i)
@@ -860,16 +876,20 @@ if __name__ == "__main__":
     
     pb = vedo.ProgressBar(0, time_array.shape[0])
 
-    for i in pb.range():
-        vol = vedo.Volume(conc_data_array_time[i], c=('r','w','b'), alpha=(0,0.5,0.8,1))
-        lego = vol.legosurface(vmin=0, vmax=1,cmap='bwr_r').alpha(0.5)
-        lego.addScalarBar()
-        vp=lego
-        vp.show()
+    # for i in pb.range():
+    #     vol = vedo.Volume(conc_data_array_time[i], c=('r','w','b'), alpha=(0,0.5,0.8,1))
+    #     lego = vol.legosurface(vmin=0, vmax=1,cmap='bwr_r').alpha(0.5)
+    #     lego.addScalarBar()
+    #     vp=lego
+    #     vp.show()
+    
+    
         # pb.print()
         # print(conc_data_array_time[i])
     # print(conc_data_array_time[-1])
-    vp.show(interactive=1)
+    
+    # vp.show(interactive=1)
+    
     # vol = vedo.Volume(conc_data_array_time[0])
     # lego = vol.legosurface(vmin=0, vmax=1)
     # vp += lego
