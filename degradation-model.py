@@ -35,7 +35,36 @@ class Presets:
     def mw_loss_coeff(self):
         return self.preset[self.led]["mw_loss_coeff"]
     
+class Voxelize_DF:
+    def __init__(self,directory,booltype=False):
+        self.directory = directory
+        self.booltype = booltype
 
+    def to_numpy(self):
+        """[summary]
+        Returns:
+            array, array -- converts image to numpy array and returns the array and its size.
+        """
+        res = np.asarray(Image.open(self.directory + os.listdir(self.directory)[0])).shape
+        arr = np.empty([res[0], res[1], len(os.listdir(self.directory))])
+        res1 = arr.shape
+        for i, j in enumerate(os.listdir(self.directory)):
+            arr[:, :, i] = np.asarray(Image.open(self.directory + j), dtype=bool)
+        print(arr, res1)
+        return arr, res1
+
+    def main_df(self, numprops):
+        arr = self.to_numpy()[0]
+        coord = np.asarray(np.where(arr))
+        coords = np.empty((len(coord[0]),4), dtype=np.int64)
+        for i in np.arange(len(coord[0])):
+            coords[i][0]=i
+            coords[i][1:4] = coord[:,i]
+        coords_df = pd.DataFrame(coords,columns=['id', 'x', 'y', 'z'])
+
+        np.empty((np.shape(coords)[0], numprops), dtype=int)
+        return coords_df
+        
 class Voxelize:
     def __init__(self, directory, booltype=False):
         self.directory = directory
@@ -712,26 +741,43 @@ def Modulus(n):
     return 3*n*k_b*310.15
 
 def Visualise(model, scalar=None):
-    pv.set_plot_theme('dark')
+    # pv.set_plot_theme('dark')
 
-    pcloud = pv.PolyData(model)
-    # print(pcloud.n_points())
-    pcloud['radius'] = np.asarray([1]*coords.shape[0])
+    # pcloud = pv.PolyData(model)
+    # # print(pcloud.n_points())
+    # pcloud['radius'] = np.asarray([1]*coords.shape[0])
 
-    geom1 = pv.Cube()
-    # geom = pv.Sphere(theta_resolution=8, phi_resolution=8)
-    glyphed = pcloud.glyph(scale="radius", geom=geom1) # progress_bar=True)
-    pcloud.point_data['scalars'] = scalar
-    pcloud.set_active_scalars('scalars')
-    # print(glyphed.n_points())
+    # geom1 = pv.Cube()
+    # # geom = pv.Sphere(theta_resolution=8, phi_resolution=8)
+    # glyphed = pcloud.glyph(scale="radius", geom=geom1) # progress_bar=True)
+    # pcloud.point_data['scalars'] = scalar
+    # pcloud.set_active_scalars('scalars')
+    # # print(glyphed.n_points())
     
 
-    p = pv.Plotter(notebook=False)
-    p.add_mesh(glyphed, show_edges=True, edge_color='black', scalars='scalars')
-    print(pcloud)
-    # print(p.n_points())
-    p.show()
+    # p = pv.Plotter(notebook=False)
+    # p.add_mesh(glyphed, show_edges=True, edge_color='black', scalars='scalars')
+    # print(pcloud)
+    # # print(p.n_points())
+    # p.show()
     #https://github.com/pyvista/pyvista-support/issues/346
+
+    vtkpoints = pg.points_to_poly_data(model)
+    print(vtkpoints)
+    bounds = vtkpoints.bounds
+    print(bounds)
+    margin = 100
+    n = 300
+    ldim = bounds[-1] + margin*2
+    grid = pv.UniformGrid((n,n,n))
+    grid.origin = [bounds[0] - margin]*3
+    spacing = ldim/(n-1)
+    grid.spacing = [spacing]*3
+
+    vox = grid.interpolate(vtkpoints,radius=spacing*2,progress_bar=True)
+    mask = vox['a']>0
+    vox_valid = vox.extract_points(mask, adjacent_cells=False)
+
 
 if __name__ == "__main__":
     print('numpy version = ', np.__version__)
@@ -762,7 +808,7 @@ if __name__ == "__main__":
     if props.shape[0] != path[1][0].shape[0]:
         print('file does not match... creating new data')
 
-        mat_props = InitPixelClassifier(coords, nparr, props).init_classify(0.097, 0.67, 3) 
+        mat_props = InitPixelClassifier(coords, nparr, props).init_classify(0.097, 0.67, 3)
         flowpath = PathArray(coords, nparr, mat_props[0]).initPathArray()
         path = iter_path(2, coords, mat_props, nparr, idarr, flowpath, bias=True)
     else:
