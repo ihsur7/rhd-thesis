@@ -818,6 +818,7 @@ if __name__ == "__main__":
     # for i in path[0]:
     #     path_ln.append(i.shape[0])
     # print(path_ln)
+    print(np.all(props[0][:,1]))
     print(path[0][0].shape)
     # print('Avg. Path Length: ', np.average(path_ln))
     print('model resolution = ', nparr[0].shape)
