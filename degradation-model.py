@@ -804,7 +804,7 @@ if __name__ == "__main__":
 
     # print(nparr)
     idarr = a.vox_id()
-    
+    print('\n\nPATH = \n', path[2])
     if props.shape[0] != path[1][0].shape[0]:
         print('file does not match... creating new data')
 
@@ -818,7 +818,7 @@ if __name__ == "__main__":
     # for i in path[0]:
     #     path_ln.append(i.shape[0])
     # print(path_ln)
-    print(np.all(props[0][:,1]))
+    # print(np.all(props[0][:,1]))
     print(path[0][0].shape)
     # print('Avg. Path Length: ', np.average(path_ln))
     print('model resolution = ', nparr[0].shape)

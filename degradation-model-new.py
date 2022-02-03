@@ -9,6 +9,7 @@ import scipy.ndimage as ndimage
 import pyvista
 import PVGeo as pvgeo
 from tqdm import tqdm
+import gmpy2
 
 class Presets:
     def __init__(self, led):
@@ -300,29 +301,40 @@ def iter_path(main_df, np_array, path_df, id_array, res, bias = True, max_steps=
             else:
                 single_px_counter += 1
         t += 1
-        print(path_df)
+        # print(path_df)
         if max_steps is not None and t == max_steps+1:
             break
     print('All voxels pathed.')
     print('Steps required: ', t)
     print('#single pixels: ', single_px_counter)
     if save:
-        np.save(output_dir+'path_array', np.asarray_chkfinite((main_df, path_df, np_array, id_array), dtype=object), allow_pickle=True)
-        print('paths saved...')
+        main_df.to_csv(output_dir+'main_df.csv')
+        print("main_df saved...")
+        path_df.to_csv(output_dir+'path_df.csv')
+        print("path_df saved...")
+        np.save(output_dir+'path_array', np.asarray_chkfinite((np_array, id_array), dtype=object), allow_pickle=True)
+        print('arrays saved...')
     return main_df, path_df, np_array, id_array
 
 def file_checker(input_dir, output_dir):
     im = Voxelize_DF(input_dir)
     np_array = im.to_numpy()[0]
-    im_out = np.load(output_dir+"path_array.npy")
-    if np_array == im_out[2]:
-        print("file exists. no paths will be generated")
-        return 0
-    else:
-        print("file not found. paths will be generated")
-        return 1
+    im_out = np.load(output_dir+"path_array.npy", allow_pickle=True)
+    return 0 if np_array.all() == im_out[0].all() else 1
 
-def MwLossData(temp, path, time_array, gradtype='lin', time_array_units = 'weeks'):
+def Fick(diff, t, c0 = None, x=1):
+    """
+    returns C/C0
+    C0 = water_conc
+
+    """
+    if c0 is not None:
+        return c0*math.erfc(x/(math.sqrt(4*diff*t)))
+
+    # print(conc_ratio)
+    return math.erfc(x/(math.sqrt(4*diff*t)))
+
+def MwLossData(temp, main_df, path_df, time_array, gradtype='lin', time_array_units = 'weeks'):
     # loss_rate= [0.001776, 0.002112, 0.002527] #ln, in weeks too high, may need to be in seconds
     loss_rate = [4.900e-008, 4.737e-008, 4.262e-008] #ln, in seconds
     # loss_rate = [0.0007610, 0.0008171, 0.001194]
@@ -340,23 +352,18 @@ def MwLossData(temp, path, time_array, gradtype='lin', time_array_units = 'weeks
     mw_pbs = 411.04 #g/mol
     water_conc = (water_mass/voxel_vol)*(1/mw_water)
     print("C0: ", water_conc)
-    data_df = pd.DataFrame()
-    data_array = [i[0] for i in path[1][0]]
-    data_array = np.asarray_chkfinite(data_array)
-    data_array = data_array.reshape(data_array.shape[0],-1)
-    conc_array = data_array
-    data_array = np.c_[data_array, np.zeros(shape=(data_array.shape[0], time_array.shape[0]))]
-    conc_array = np.c_[conc_array, np.zeros(shape=(conc_array.shape[0], time_array.shape[0]))]
-    conc_data_dict_1 = {k[0]: np.zeros(shape=time_array.shape[0]) for k in path[1][0]}
-    for i in data_array:
-        i[1] = path[2][i[0]][5]
-    for j in conc_array:
-        j[1] = path[2][j[0]][3]
-    data_dict = {i[0]: i[1:] for i in data_array}
-    conc_dict = {j[0]: j[1:] for j in conc_array}
+    data_arr = np.zeros(shape=(len(main_df.index), len(time_array)))
+    data_df = pd.DataFrame(data_arr, columns = ['t'+str(i) for i in list(range(len(time_array)))])
+    conc_df = data_df
+    conc_df_1 = conc_df
+    for i in data_df.index:
+        data_df['t0'][i] = main_df['mw'][i]
+        conc_df['t0'][i] = main_df['water_conc'][i]
+        # data_df.loc[[i, 't0']]= main_df.loc[[i, 'mw']]
+        # conc_df.loc[[i, 't0']] = main_df.loc[[i, 'water_conc']]
     for tindex, t in enumerate(tqdm(time_array)):
-        for p in path[0]:
-            for index, q in enumerate(p):
+        for p in path_df: #for column in path_df
+            for index, q in enumerate(path_df[p]):
                 if time_array_units == 'weeks':
                     tt = t*604800 #weeks in seconds
                 elif time_array_units == 'days':
@@ -365,7 +372,7 @@ def MwLossData(temp, path, time_array, gradtype='lin', time_array_units = 'weeks
                     tt = t*3600
                 elif time_array_units == 'minutes':
                     tt = t*60
-                elif time_array_units == 'seconds':
+                elif time_array_units == 'seconds': 
                     tt = t
                 else:
                     print('Unknown time units')
@@ -374,14 +381,17 @@ def MwLossData(temp, path, time_array, gradtype='lin', time_array_units = 'weeks
                     avg_conc = 0
                 else:
                     avg_conc = (Fick(diff_coeff_mm["37"], tt, c0=water_conc, x=index*pixel_scale) + Fick(diff_coeff_mm["37"], tt, c0=water_conc, x=(index+1)*pixel_scale))/2
-                total_conc = math.sqrt((avg_conc**2)+(path[2][q][3]**2))
+                total_conc = gmpy2.sqrt((avg_conc**2)+(main_df.loc[q, 'water_conc']**2))
+                # print(total_conc)
+                # total_conc = math.sqrt((avg_conc**2)+(path[2][q][3]**2))
                 total_conc_ratio = total_conc/water_conc
-                conc_dict[q][tindex] = total_conc_ratio
-                conc_array[index][tindex+1] = total_conc_ratio
-
-                path[2][q][3] = total_conc_ratio
-                path[1][0][index+1][4] = total_conc_ratio
-                conc_data_dict_1[q][tindex] += total_conc_ratio
+                conc_df.loc[q, 't'+str(tindex)] = total_conc_ratio
+                # conc_dict[q][tindex] = total_conc_ratio
+                main_df.loc[q, 'water_conc'] = total_conc_ratio
+                # path[2][q][3] = total_conc_ratio
+                # path[1][0][index+1][4] = total_conc_ratio
+                conc_df_1.loc[q, 't'+str(tindex)] += total_conc_ratio
+                # conc_data_dict_1[q][tindex] += total_conc_ratio
                 if gradtype == "lin":
                     multiplier = total_conc_ratio
                     # grad = loss_rate_calc(average_loss_rate, avg_conc_ratio)
@@ -398,15 +408,108 @@ def MwLossData(temp, path, time_array, gradtype='lin', time_array_units = 'weeks
                 else:
                     multiplier = 1
                 loss_rate = average_loss_rate**multiplier
-                if path[2][q][4] == 1:
+                if main_df['is_crys'][q] == 1:
+                # if path[2][q][4] == 1:
                     loss_rate *= loss_rate
-                mwt = path[2][q][5]*math.e**(-1*(loss_rate)*tt)
-                data_dict[q][tindex] = mwt
-                data_array[index][tindex+1] = mwt
-
-    np.save(output_dir+'data_array'+'_'+gradtype, data_array, allow_pickle=True)
+                mwt = main_df['mw'][q]*math.e**(-1*(loss_rate)*tt)
+                # mwt = path[2][q][5]*math.e**(-1*(loss_rate)*tt)
+                data_df.loc[q, 't'+str(tindex)] = mwt
+                # data_dict[q][tindex] = mwt
+                # data_array[index][tindex+1] = mwt
+    main_df.to_csv(output_dir+'main_df.csv')
+    print("main_df saved...")
+    path_df.to_csv(output_dir+'path_df.csv')
+    print("path_df saved...")
+    data_df.to_csv(output_dir+'data_df.csv')
+    print("data_df saved...")
+    conc_df.to_csv(output_dir+'conc_df.csv')
+    print("conc_df saved...")
     # np.save(output_dir+'conc_ratio'+'_'+gradtype, conc_data_array, allow_pickle=True)
-    return path, data_array, data_dict, conc_dict
+    return main_df, path_df, data_df
+
+class Visualise2:
+    def __init__(self, main_df, data_df, time_array):
+        self.main_df = main_df
+        self.data_df = data_df
+        self.time_array = time_array
+coords_df = main_df[['x', 'y', 'z']].copy()
+    # print(data_df)
+    for i in ['t'+str(i) for i in list(range(len(time_array)))]:
+        coords_df = coords_df.join(data_df[i])
+    # coords_df = coords_df.join(data_df)
+    # print(coords_df)
+    vtkpoints = pvgeo.points_to_poly_data(coords_df)
+    # vtkpoints = pvgeo.points_to_poly_data(model)
+    # print(vtkpoints)
+    bounds = vtkpoints.bounds
+    # print(bounds)
+    margin = 100
+    n = 300 #600
+    ldim = bounds[-1] + margin*2
+    grid = pyvista.UniformGrid((n,n,n))
+    grid.origin = [bounds[0] - margin]*3
+    spacing = ldim/(n-1)
+    grid.spacing = [spacing]*3
+
+    vox = grid.interpolate(vtkpoints,radius=spacing*2,progress_bar=True)
+    mask = vox['t0']>0
+    vox_valid = vox.extract_points(mask, adjacent_cells=False)
+    # vox_valid.plot()
+    plotter = pyvista.Plotter(notebook=False)
+    plotter.add_mesh(vox_valid)
+    plotter.add_slider_widget(change_t, [0,len(time_array)-1], title='Time')
+    plotter.show()
+        
+
+def Visualise(main_df, data_df, time_array, scalar=None):
+    # pv.set_plot_theme('dark')
+
+    # pcloud = pv.PolyData(model)
+    # # print(pcloud.n_points())
+    # pcloud['radius'] = np.asarray([1]*coords.shape[0])
+
+    # geom1 = pv.Cube()
+    # # geom = pv.Sphere(theta_resolution=8, phi_resolution=8)
+    # glyphed = pcloud.glyph(scale="radius", geom=geom1) # progress_bar=True)
+    # pcloud.point_data['scalars'] = scalar
+    # pcloud.set_active_scalars('scalars')
+    # # print(glyphed.n_points())
+    
+
+    # p = pv.Plotter(notebook=False)
+    # p.add_mesh(glyphed, show_edges=True, edge_color='black', scalars='scalars')
+    # print(pcloud)
+    # # print(p.n_points())
+    # p.show()
+    #https://github.com/pyvista/pyvista-support/issues/346
+    # pyvista.rcParams['use_ipyvtk'] = True
+    coords_df = main_df[['x', 'y', 'z']].copy()
+    # print(data_df)
+    for i in ['t'+str(i) for i in list(range(len(time_array)))]:
+        coords_df = coords_df.join(data_df[i])
+    # coords_df = coords_df.join(data_df)
+    # print(coords_df)
+    vtkpoints = pvgeo.points_to_poly_data(coords_df)
+    # vtkpoints = pvgeo.points_to_poly_data(model)
+    # print(vtkpoints)
+    bounds = vtkpoints.bounds
+    # print(bounds)
+    margin = 100
+    n = 300 #600
+    ldim = bounds[-1] + margin*2
+    grid = pyvista.UniformGrid((n,n,n))
+    grid.origin = [bounds[0] - margin]*3
+    spacing = ldim/(n-1)
+    grid.spacing = [spacing]*3
+
+    vox = grid.interpolate(vtkpoints,radius=spacing*2,progress_bar=True)
+    mask = vox['t0']>0
+    vox_valid = vox.extract_points(mask, adjacent_cells=False)
+    # vox_valid.plot()
+    plotter = pyvista.Plotter(notebook=False)
+    plotter.add_mesh(vox_valid)
+    plotter.add_slider_widget(change_t, [0,len(time_array)-1], title='Time')
+    plotter.show()
 
 if __name__ == "__main__":
     in_dir = "/data/sample1/25/uct/tiff/"  # '/data/sample1/25/model/25.stl' #"/data/sample1/25/uct/tiff/"
@@ -424,13 +527,17 @@ if __name__ == "__main__":
     main_df = im_class[0]
     # print(im_class[0])
     if file_checker(input_dir, output_dir) == 1:
+        print("file not found. paths will be generated")
         im_path = PathArray(main_df, np_array).initPathArray()
         # print(im_path)
         path = iter_path(main_df, np_array, im_path, id_array, res, bias=True, max_steps = None, save=True)
+        path_df = path[1]
     else:
-        path = np.load(output_dir+"path_array.npy")
-        print('model resolution = ', nparr[0].shape)
-    print('# polymer voxels = ', coords.shape)
+        print("file exists. no paths will be generated")
+        path_df = pd.read_csv(output_dir+'path_df.csv')
+        path = np.load(output_dir+"path_array.npy", allow_pickle=True)
+        print('model resolution = ', path[0].shape)
+    print('# polymer voxels = ', main_df.shape[0])
     #25 = 211.88 seconds on macbook, ~50k paths (flow vectors)
     #50 = 
     time_array = np.arange(start=0, stop=2, step=1)
@@ -445,3 +552,17 @@ if __name__ == "__main__":
     gradtypelist = ['lin', 'exp', 'log', 'quad']
     tmu = 'weeks'
     gtype = 'lin' #default = lin
+    print('Calculating Mw data...')
+    # mw_data = np.load(output_dir+'data_array'+'_'+gtype+'.npy', allow_pickle=True)
+    # mw_data = MwLossData("37", main_df, path_df, time_array, gradtype=gtype, time_array_units=tmu)
+    data_df = pd.read_csv(output_dir+'data_df.csv')
+    avg_mw = []
+    # print(mw_data)
+    for i in ['t'+str(i) for i in list(range(len(time_array)))]:
+        # print(i)
+        # print(data_df[i].mean())
+        avg_mw.append(data_df[i].mean())
+
+    print(avg_mw)
+    Visualise(main_df, data_df, time_array)
+    # avg_mw = [i for i in mw_data[2][i].mean()]
