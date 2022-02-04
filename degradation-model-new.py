@@ -427,89 +427,204 @@ def MwLossData(temp, main_df, path_df, time_array, gradtype='lin', time_array_un
     # np.save(output_dir+'conc_ratio'+'_'+gradtype, conc_data_array, allow_pickle=True)
     return main_df, path_df, data_df
 
-class Visualise2:
-    def __init__(self, main_df, data_df, time_array):
-        self.main_df = main_df
-        self.data_df = data_df
-        self.time_array = time_array
-coords_df = main_df[['x', 'y', 'z']].copy()
-    # print(data_df)
-    for i in ['t'+str(i) for i in list(range(len(time_array)))]:
-        coords_df = coords_df.join(data_df[i])
-    # coords_df = coords_df.join(data_df)
-    # print(coords_df)
-    vtkpoints = pvgeo.points_to_poly_data(coords_df)
-    # vtkpoints = pvgeo.points_to_poly_data(model)
-    # print(vtkpoints)
-    bounds = vtkpoints.bounds
-    # print(bounds)
-    margin = 100
-    n = 300 #600
-    ldim = bounds[-1] + margin*2
-    grid = pyvista.UniformGrid((n,n,n))
-    grid.origin = [bounds[0] - margin]*3
-    spacing = ldim/(n-1)
-    grid.spacing = [spacing]*3
+# class Visualise2:
+#     def __init__(self, main_df, data_df, time_array):
+#         self.main_df = main_df
+#         self.data_df = data_df
+#         self.time_array = time_array
+#     coords_df = main_df[['x', 'y', 'z']].copy()
+#     # print(data_df)
+#     for i in ['t'+str(i) for i in list(range(len(time_array)))]:
+#         coords_df = coords_df.join(data_df[i])
+#     # coords_df = coords_df.join(data_df)
+#     # print(coords_df)
+#     vtkpoints = pvgeo.points_to_poly_data(coords_df)
+#     # vtkpoints = pvgeo.points_to_poly_data(model)
+#     # print(vtkpoints)
+#     bounds = vtkpoints.bounds
+#     # print(bounds)
+#     margin = 100
+#     n = 300 #600
+#     ldim = bounds[-1] + margin*2
+#     grid = pyvista.UniformGrid((n,n,n))
+#     grid.origin = [bounds[0] - margin]*3
+#     spacing = ldim/(n-1)
+#     grid.spacing = [spacing]*3
 
-    vox = grid.interpolate(vtkpoints,radius=spacing*2,progress_bar=True)
-    mask = vox['t0']>0
-    vox_valid = vox.extract_points(mask, adjacent_cells=False)
-    # vox_valid.plot()
-    plotter = pyvista.Plotter(notebook=False)
-    plotter.add_mesh(vox_valid)
-    plotter.add_slider_widget(change_t, [0,len(time_array)-1], title='Time')
-    plotter.show()
+#     vox = grid.interpolate(vtkpoints,radius=spacing*2,progress_bar=True)
+#     mask = vox['t0']>0
+#     vox_valid = vox.extract_points(mask, adjacent_cells=False)
+#     # vox_valid.plot()
+#     plotter = pyvista.Plotter(notebook=False)
+#     plotter.add_mesh(vox_valid)
+#     plotter.add_slider_widget(change_t, [0,len(time_array)-1], title='Time')
+#     plotter.show()
         
 
-def Visualise(main_df, data_df, time_array, scalar=None):
-    # pv.set_plot_theme('dark')
+# def Visualise(main_df, data_df, time_array, scalar=None):
+#     # pv.set_plot_theme('dark')
 
-    # pcloud = pv.PolyData(model)
-    # # print(pcloud.n_points())
-    # pcloud['radius'] = np.asarray([1]*coords.shape[0])
+#     # pcloud = pv.PolyData(model)
+#     # # print(pcloud.n_points())
+#     # pcloud['radius'] = np.asarray([1]*coords.shape[0])
 
-    # geom1 = pv.Cube()
-    # # geom = pv.Sphere(theta_resolution=8, phi_resolution=8)
-    # glyphed = pcloud.glyph(scale="radius", geom=geom1) # progress_bar=True)
-    # pcloud.point_data['scalars'] = scalar
-    # pcloud.set_active_scalars('scalars')
-    # # print(glyphed.n_points())
+#     # geom1 = pv.Cube()
+#     # # geom = pv.Sphere(theta_resolution=8, phi_resolution=8)
+#     # glyphed = pcloud.glyph(scale="radius", geom=geom1) # progress_bar=True)
+#     # pcloud.point_data['scalars'] = scalar
+#     # pcloud.set_active_scalars('scalars')
+#     # # print(glyphed.n_points())
     
 
-    # p = pv.Plotter(notebook=False)
-    # p.add_mesh(glyphed, show_edges=True, edge_color='black', scalars='scalars')
-    # print(pcloud)
-    # # print(p.n_points())
-    # p.show()
-    #https://github.com/pyvista/pyvista-support/issues/346
-    # pyvista.rcParams['use_ipyvtk'] = True
-    coords_df = main_df[['x', 'y', 'z']].copy()
-    # print(data_df)
-    for i in ['t'+str(i) for i in list(range(len(time_array)))]:
-        coords_df = coords_df.join(data_df[i])
-    # coords_df = coords_df.join(data_df)
-    # print(coords_df)
-    vtkpoints = pvgeo.points_to_poly_data(coords_df)
-    # vtkpoints = pvgeo.points_to_poly_data(model)
-    # print(vtkpoints)
-    bounds = vtkpoints.bounds
-    # print(bounds)
-    margin = 100
-    n = 300 #600
-    ldim = bounds[-1] + margin*2
-    grid = pyvista.UniformGrid((n,n,n))
-    grid.origin = [bounds[0] - margin]*3
-    spacing = ldim/(n-1)
-    grid.spacing = [spacing]*3
+#     # p = pv.Plotter(notebook=False)
+#     # p.add_mesh(glyphed, show_edges=True, edge_color='black', scalars='scalars')
+#     # print(pcloud)
+#     # # print(p.n_points())
+#     # p.show()
+#     #https://github.com/pyvista/pyvista-support/issues/346
+#     # pyvista.rcParams['use_ipyvtk'] = True
+#     global coords_df_2
+#     coords_df_2 = main_df[['x', 'y', 'z']].copy()
+#     # print(data_df)
+    
+#     for i in ['t'+str(i) for i in list(range(len(time_array)))]:
+#         coords_df_2 = coords_df.join(data_df[i])
+#     # coords_df = coords_df.join(data_df)
+#     # print(coords_df)
+#     vtkpoints = pvgeo.points_to_poly_data(coords_df_2)
+#     # vtkpoints = pvgeo.points_to_poly_data(model)
+#     # print(vtkpoints)
+#     bounds = vtkpoints.bounds
+#     # print(bounds)
+#     margin = 100
+#     n = 300 #600
+#     ldim = bounds[-1] + margin*2
+#     grid = pyvista.UniformGrid((n,n,n))
+#     grid.origin = [bounds[0] - margin]*3
+#     spacing = ldim/(n-1)
+#     grid.spacing = [spacing]*3
 
-    vox = grid.interpolate(vtkpoints,radius=spacing*2,progress_bar=True)
-    mask = vox['t0']>0
-    vox_valid = vox.extract_points(mask, adjacent_cells=False)
-    # vox_valid.plot()
-    plotter = pyvista.Plotter(notebook=False)
-    plotter.add_mesh(vox_valid)
-    plotter.add_slider_widget(change_t, [0,len(time_array)-1], title='Time')
+#     vox = grid.interpolate(vtkpoints,radius=spacing*2,progress_bar=True)
+#     mask = vox['t0']>0
+#     vox_valid = vox.extract_points(mask, adjacent_cells=False)
+#     # vox_valid.plot()
+#     plotter = pyvista.Plotter(notebook=False)
+#     plotter.add_mesh(vox_valid)
+#     plotter.add_slider_widget(change_t, [0,len(time_array)-1], title='Time')
+#     plotter.show()
+
+# def Visualise_2(main_df, data_df, time_array):
+#     global coords_df_2, plotter, grid, vtkpoints, spacing
+#     coords_df_2 = main_df[['x', 'y', 'z']].copy()
+#     for i in ['t'+str(i) for i in list(range(len(time_array)))]:
+#         coords_df_2 = coords_df_2.join(data_df[i])
+
+#     vtkpoints = pvgeo.points_to_poly_data(coords_df_2)
+#     bounds = vtkpoints.bounds
+#     margin = 100
+#     n = 500 #600
+#     ldim = bounds[-1] + margin*2
+#     grid = pyvista.UniformGrid((n,n,n))
+#     grid.origin = [bounds[0] - margin]*3
+#     spacing = ldim/(n-1)
+#     grid.spacing = [spacing]*3
+
+#     plotter = pyvista.Plotter(notebook=False)
+#     plotter.add_slider_widget(change_t, [0,len(time_array)-1], value = 0, title='Time')
+#     plotter.show()
+
+# def change_t(value):
+#     global vox_valid
+#     time = 't'+str(int(value))
+    
+#     vox = grid.interpolate(vtkpoints,radius=spacing*2,progress_bar=False)
+#     mask = vox[time]>0
+#     vox_valid = vox.extract_points(mask, adjacent_cells=False)
+#     plotter.add_mesh(vox_valid)
+
+# def Visualise_3(main_df, data_df, time_array):
+#     global coords_df_2, points, plotter, data_array
+#     coords_df_2 = main_df[['x', 'y', 'z']].copy()
+#     for i in ['t'+str(i) for i in list(range(len(time_array)))]:
+#         coords_df_2 = coords_df_2.join(data_df[i])
+#     print(coords_df_2)
+#     points = pyvista.PolyData(np.asarray(coords_df_2[['x', 'y', 'z']]), force_float=False)
+#     # print(points)
+#     data_array = np.asarray(coords_df_2['t0'])
+#     print(data_array)
+#     points.cell_data['t0'] = data_array.flatten()
+#     print(points.cell_data)
+#     plotter = pyvista.Plotter()
+#     plotter.add_mesh(points)
+#     plotter.add_slider_widget(change_t2, [0, len(time_array)-1], value = 0, title='Time')
+#     plotter.show(interactive_update=True)
+
+# def change_t2(value):
+#     time = 't'+str(int(value))
+#     data_array = np.asarray(coords_df_2[time])
+#     points.cell_data[time] = data_array.flatten()
+#     print(data_array)
+#     points.set_active_scalars(time)
+#     print(points.cell_data)
+#     # plotter.update_scalars(data_array.flatten(), mesh = points)
+#     plotter.update()
+
+def Visualise_4(main_df, data_df, time_array):
+    global coords_df_2, plotter, grid, vtkpoints, spacing
+    coords_df_2 = main_df[['x', 'y', 'z']].copy()
+    for i in ['t'+str(i) for i in list(range(len(time_array)))]:
+        coords_df_2 = coords_df_2.join(data_df[i])
+
+    # points = pyvista.PolyData(np.asarray(coords_df_2[['x','y','z']]), force_float=False)
+    # grid = points.cast_to_unstructured_grid()
+    # print(points)
+    # print(grid)
+    # grid.glyph(geom=pyvista.Cube()).plot()
+
+    # # points.glyph(geom=pyvista.Cube(), factor=1).plot()
+    # plotter = pyvista.Plotter()
+    # plotter.add_mesh(grid)
+    # plotter.show()
+
+    #https://github.com/pyvista/pyvista-support/issues/291
+    e = SceneEngine()
+    points = pvgeo.points_to_poly_data(coords_df_2[['x','y','z']])
+    voxelizer = pvgeo.filters.VoxelizePoints()
+    voxelizer.set_deltas(1,1,1)
+    grid = voxelizer.apply(points)
+    print(grid)
+    plotter = pyvista.Plotter()
+    plotter.add_mesh(grid)
     plotter.show()
+
+def createGoints(tstep):
+    return 
+
+class SceneEngine:
+    def __init__(self, grid):
+        self.grid = grid
+        self.output = grid.threshold(all_scalars=False)
+
+        self._mi = 0
+        self._ma = 300000
+        self._tstep = 0
+    
+    def _threshold(self):
+        self.output.overwrite(self.grid.threshold([self._mi, self._ma], all_scalars=False))
+    
+    def threshold_min(self, mi):
+        self._mi = mi
+        self._threshold()
+    
+    def threshold_max(self, ma):
+        self._ma = ma
+        self._threshold()
+
+    def update_timestep(self, tstep):
+        self._tstep = tstep
+        self.grid.overwrite(createGrid(tstep))
+        self._threshold()
+
 
 if __name__ == "__main__":
     in_dir = "/data/sample1/25/uct/tiff/"  # '/data/sample1/25/model/25.stl' #"/data/sample1/25/uct/tiff/"
@@ -518,25 +633,31 @@ if __name__ == "__main__":
     input_dir = pdir.InputDIR()
     output_dir = pdir.OutputDIR()
     new_input_dir = pyd.Directory(out_dir).InputDIR()
-    im = Voxelize_DF(input_dir)
-    main_df = im.main_df()
-    np_array = im.to_numpy()[0]
-    id_array = im.vox_id()
-    res = im.to_numpy()[1]
-    im_class = InitPixelClassifier(main_df, np_array).init_classify(0.097, 0.67, 3)
-    main_df = im_class[0]
-    # print(im_class[0])
     if file_checker(input_dir, output_dir) == 1:
+        im = Voxelize_DF(input_dir)
+        main_df = im.main_df()
+        np_array = im.to_numpy()[0]
+        id_array = im.vox_id()
+        res = im.to_numpy()[1]
+        im_class = InitPixelClassifier(main_df, np_array).init_classify(0.097, 0.67, 3)
+        main_df = im_class[0]
         print("file not found. paths will be generated")
         im_path = PathArray(main_df, np_array).initPathArray()
         # print(im_path)
         path = iter_path(main_df, np_array, im_path, id_array, res, bias=True, max_steps = None, save=True)
         path_df = path[1]
     else:
+        main_df = pd.read_csv(output_dir+'main_df.csv')
+        main_arr = np.load(output_dir+'path_array.npy', allow_pickle=True)
+        np_array = main_arr[0]
+        id_array = main_arr[1]
         print("file exists. no paths will be generated")
         path_df = pd.read_csv(output_dir+'path_df.csv')
         path = np.load(output_dir+"path_array.npy", allow_pickle=True)
         print('model resolution = ', path[0].shape)
+
+    # print(im_class[0])
+    
     print('# polymer voxels = ', main_df.shape[0])
     #25 = 211.88 seconds on macbook, ~50k paths (flow vectors)
     #50 = 
@@ -563,6 +684,6 @@ if __name__ == "__main__":
         # print(data_df[i].mean())
         avg_mw.append(data_df[i].mean())
 
-    print(avg_mw)
-    Visualise(main_df, data_df, time_array)
+    # print(avg_mw)
+    Visualise_4(main_df, data_df, time_array)
     # avg_mw = [i for i in mw_data[2][i].mean()]
