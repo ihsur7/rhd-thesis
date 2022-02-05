@@ -1,5 +1,6 @@
 import os
 import math
+from tkinter import E
 import pydirectory as pyd
 import numpy as np
 import pandas as pd
@@ -570,7 +571,7 @@ def MwLossData(temp, main_df, path_df, time_array, gradtype='lin', time_array_un
 #     plotter.update()
 
 def Visualise_4(main_df, data_df, time_array):
-    global coords_df_2, plotter, grid, vtkpoints, spacing
+    global coords_df_2, plotter, grid, spacing, e
     coords_df_2 = main_df[['x', 'y', 'z']].copy()
     for i in ['t'+str(i) for i in list(range(len(time_array)))]:
         coords_df_2 = coords_df_2.join(data_df[i])
@@ -587,28 +588,70 @@ def Visualise_4(main_df, data_df, time_array):
     # plotter.show()
 
     #https://github.com/pyvista/pyvista-support/issues/291
-    e = SceneEngine()
+    
     points = pvgeo.points_to_poly_data(coords_df_2[['x','y','z']])
     voxelizer = pvgeo.filters.VoxelizePoints()
     voxelizer.set_deltas(1,1,1)
     grid = voxelizer.apply(points)
     print(grid)
-    plotter = pyvista.Plotter()
-    plotter.add_mesh(grid)
-    plotter.show()
+    grid.cell_data['Time'] = coords_df_2['t0']
+    
+    e = SceneEngine(grid, time_array)
+    minval = np.nanmin(np.asarray(coords_df_2['t'+str(time_array[-1])]))
+    maxval = np.nanmax(np.asarray(coords_df_2['t'+str(time_array[0])]))
+    # print(grid)
 
-def createGoints(tstep):
-    return 
+    
+    #move add widget commands to scene engine class
+    # add_slider(time_array)
+
+
+    # plotter.add_slider_widget(e.threshold_min, rng=[minval, maxval], value = np.nanmin(grid.active_scalars), title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9))
+    # plotter.add_slider_widget(e.threshold_max, rng=[minval, maxval], value = np.nanmax(grid.active_scalars), title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9))
+
+
+    # plotter.add_slider_widget(e.threshold_min, rng=[np.nanmin(grid.active_scalars), np.nanmax(grid.active_scalars)], value = np.nanmin(grid.active_scalars), title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9))
+    # plotter.add_slider_widget(e.threshold_max, rng=[np.nanmin(grid.active_scalars), np.nanmax(grid.active_scalars)], value = np.nanmax(grid.active_scalars), title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9))
+    # plotter.clear_slider_widgets()
+    # plotter.add_slider_widget(e.threshold_min, rng=[0, 500000], value=0, title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9))
+    # plotter.add_slider_widget(e.threshold_max, rng=[0, 500000], value = 500000, title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9))
+
+def createGrid(tstep):
+    points = pvgeo.points_to_poly_data(coords_df_2[['x','y','z']])
+    voxelizer = pvgeo.filters.VoxelizePoints()
+    voxelizer.set_deltas(1,1,1)
+    grid2 = voxelizer.apply(points)
+    outline = grid2.outline()
+    grid2.cell_data['Time'] = coords_df_2['t'+str(int(tstep))]
+    print(grid2)
+    print(grid2.active_scalars)
+    return grid2
 
 class SceneEngine:
-    def __init__(self, grid):
+    def __init__(self, grid, time_array):
+        self.not_init_state = False
         self.grid = grid
-        self.output = grid.threshold(all_scalars=False)
-
+        self.output = self.grid.threshold(all_scalars=False)
+        self.time_array = time_array
         self._mi = 0
-        self._ma = 300000
+        self._ma = 500000
         self._tstep = 0
-    
+        self.plotter = pyvista.Plotter()
+        self.plotter.set_scale()
+        self.outline = self.grid.outline()
+        self.plotter.add_mesh(self.outline)
+        self.plotter.add_mesh(self.output, scalars='Time')
+        self.minM = np.nanmin(self.grid.active_scalars)
+        self.maxM = np.nanmax(self.grid.active_scalars)
+        self.clim = [self.minM, self.maxM]
+
+        self.tw = self.plotter.add_slider_widget(self.update_timestep, rng=[0,len(time_array)-1], value=0, title="Time", pointa=(.67, .9), pointb=(.98, .9), event_type='always', pass_widget=False)
+        self.tmin = self.plotter.add_slider_widget(self.threshold_min, rng=[self.minM, self.maxM], value = self.clim[0], title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9), event_type='always', pass_widget=False)
+        self.tmax = self.plotter.add_slider_widget(self.threshold_max, rng=[self.minM, self.maxM], value = self.clim[1], title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9), event_type='always', pass_widget=False)
+        self.not_init_state = True
+        self.plotter.show(return_viewer=True)
+
+
     def _threshold(self):
         self.output.overwrite(self.grid.threshold([self._mi, self._ma], all_scalars=False))
     
@@ -622,8 +665,42 @@ class SceneEngine:
 
     def update_timestep(self, tstep):
         self._tstep = tstep
-        self.grid.overwrite(createGrid(tstep))
+        grid.cell_data['Time'] = coords_df_2['t'+str(int(tstep))]
+        self.clim=[np.nanmin(self.grid.active_scalars), np.nanmax(self.grid.active_scalars)]
+        self.plotter.update_scalar_bar_range(self.clim)
+        # plotter.clear_slider_widgets()
+        
+        # plotter.add_slider_widget(e.update_timestep, rng=[0,len(self.time_array)-1], value=0, title="Time", pointa=(.67, .9), pointb=(.98, .9))
+        # tmin = plotter.add_slider_widget(e.threshold_min, rng=[np.nanmin(grid.active_scalars), np.nanmax(grid.active_scalars)], value = np.nanmin(grid.active_scalars), title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9))
+        # tmax = plotter.add_slider_widget(e.threshold_max, rng=[np.nanmin(grid.active_scalars), np.nanmax(grid.active_scalars)], value = np.nanmax(grid.active_scalars), title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9))
+        # plotter.clear_slider_widgets()
+        if self.not_init_state:
+            self.tmin.GetRepresentation().SetMinimumValue(self.clim[0])
+            self.tmin.GetRepresentation().SetMaximumValue(self.clim[1])
+            
+            self.tmax.GetRepresentation().SetMinimumValue(self.clim[0])
+            self.tmax.GetRepresentation().SetMaximumValue(self.clim[1])
+
+        # self.tmin.SetValue(self.clim[0])
+        # self.tmax.SetValue(self.clim[1])
+        # add_slider()
+        # self.grid.overwrite(createGrid(tstep))
         self._threshold()
+    
+def add_slider(time_array):
+    plotter.clear_slider_widgets()
+
+    # minval = np.nanmin(np.asarray(coords_df_2['t'+str(time_array[-1])]))
+    # maxval = np.nanmax(np.asarray(coords_df_2['t'+str(time_array[0])]))
+
+    # plotter.add_slider_widget(E.update_timestep, rng=[0,len(self.time_array)-1], value=0, title="Time", pointa=(.67, .9), pointb=(.98, .9))
+    
+    # plotter.add_slider_widget(e.threshold_min, rng=[minval, maxval], value = np.nanmin(grid.active_scalars), title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9))
+    # plotter.add_slider_widget(e.threshold_max, rng=[minval, maxval], value = np.nanmax(grid.active_scalars), title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9))
+
+    plotter.add_slider_widget(e.update_timestep, rng=[0,len(time_array)-1], value=0, title="Time", pointa=(.67, .9), pointb=(.98, .9))
+    # plotter.add_slider_widget(e.threshold_min, rng=[np.nanmin(grid.active_scalars), np.nanmax(grid.active_scalars)], value = np.nanmin(grid.active_scalars), title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9))
+    # plotter.add_slider_widget(e.threshold_max, rng=[np.nanmin(grid.active_scalars), np.nanmax(grid.active_scalars)], value = np.nanmax(grid.active_scalars), title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9))
 
 
 if __name__ == "__main__":
