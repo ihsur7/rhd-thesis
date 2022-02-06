@@ -459,8 +459,7 @@ class SceneEngine:
         self.grid = grid
         self.output = self.grid.threshold(all_scalars=False)
         self.time_array = time_array
-        self._mi = 0
-        self._ma = 500000
+
         self._tstep = 0
         self.plotter = pyvista.Plotter()
         self.plotter.set_scale()
@@ -470,12 +469,13 @@ class SceneEngine:
         self.minM = np.nanmin(self.grid.active_scalars)
         self.maxM = np.nanmax(self.grid.active_scalars)
         self.clim = [self.minM, self.maxM]
+        self._mi = self.minM
+        self._ma = self.maxM
         self.tmin = self.plotter.add_slider_widget(self.threshold_min, rng=[self.minM, self.maxM], value = self.clim[0], title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9), event_type='always', pass_widget=False)
         self.tmax = self.plotter.add_slider_widget(self.threshold_max, rng=[self.minM, self.maxM], value = self.clim[1], title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9), event_type='always', pass_widget=False)
         self.tw = self.plotter.add_slider_widget(self.update_timestep, rng=[0,len(time_array)-1], value=0, title="Time", pointa=(.67, .9), pointb=(.98, .9), event_type='always', pass_widget=False)
         self.not_init_state = True
         self.view = self.plotter.show(return_viewer=True)
-
         # self.update()
 
     def _threshold(self):
@@ -496,6 +496,8 @@ class SceneEngine:
         grid.cell_data['Mw'] = coords_df_2['t'+str(int(tstep))]
         self.clim=[np.nanmin(self.grid.active_scalars), np.nanmax(self.grid.active_scalars)]
         self.plotter.update_scalar_bar_range(self.clim)
+        # self.output.overwrite(self.grid.threshold([self._mi, self._ma], all_scalars=False))
+
         smin = self.tmin.GetRepresentation()
         smax = self.tmax.GetRepresentation()
         # if self.not_init_state:
@@ -547,7 +549,7 @@ if __name__ == "__main__":
     print('# polymer voxels = ', main_df.shape[0])
     #25 = 211.88 seconds on macbook, ~50k paths (flow vectors)
     #50 = 
-    time_array = np.arange(start=0, stop=2, step=1)
+    time_array = np.arange(start=0, stop=3, step=1)
     print('# timepoints: ', time_array.shape[0], '\ntimepoints: ', time_array)
     diff_coeff = {"25": 51.7e-12, "37": 67.6e-12, "50": 165e-12} #x10^(-12) m^2/s
     diff_coeff_mm = {"25": 51.7e-5, "37": 67.6e-5, "50": 165e-5} #mm^2/s
