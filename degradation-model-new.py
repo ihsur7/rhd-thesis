@@ -11,6 +11,9 @@ import pyvista
 import PVGeo as pvgeo
 from tqdm import tqdm
 import gmpy2
+from ipywidgets import widgets
+
+pyvista.set_plot_theme('paraview')
 
 class Presets:
     def __init__(self, led):
@@ -428,207 +431,30 @@ def MwLossData(temp, main_df, path_df, time_array, gradtype='lin', time_array_un
     # np.save(output_dir+'conc_ratio'+'_'+gradtype, conc_data_array, allow_pickle=True)
     return main_df, path_df, data_df
 
-# class Visualise2:
-#     def __init__(self, main_df, data_df, time_array):
-#         self.main_df = main_df
-#         self.data_df = data_df
-#         self.time_array = time_array
-#     coords_df = main_df[['x', 'y', 'z']].copy()
-#     # print(data_df)
-#     for i in ['t'+str(i) for i in list(range(len(time_array)))]:
-#         coords_df = coords_df.join(data_df[i])
-#     # coords_df = coords_df.join(data_df)
-#     # print(coords_df)
-#     vtkpoints = pvgeo.points_to_poly_data(coords_df)
-#     # vtkpoints = pvgeo.points_to_poly_data(model)
-#     # print(vtkpoints)
-#     bounds = vtkpoints.bounds
-#     # print(bounds)
-#     margin = 100
-#     n = 300 #600
-#     ldim = bounds[-1] + margin*2
-#     grid = pyvista.UniformGrid((n,n,n))
-#     grid.origin = [bounds[0] - margin]*3
-#     spacing = ldim/(n-1)
-#     grid.spacing = [spacing]*3
 
-#     vox = grid.interpolate(vtkpoints,radius=spacing*2,progress_bar=True)
-#     mask = vox['t0']>0
-#     vox_valid = vox.extract_points(mask, adjacent_cells=False)
-#     # vox_valid.plot()
-#     plotter = pyvista.Plotter(notebook=False)
-#     plotter.add_mesh(vox_valid)
-#     plotter.add_slider_widget(change_t, [0,len(time_array)-1], title='Time')
-#     plotter.show()
-        
 
-# def Visualise(main_df, data_df, time_array, scalar=None):
-#     # pv.set_plot_theme('dark')
-
-#     # pcloud = pv.PolyData(model)
-#     # # print(pcloud.n_points())
-#     # pcloud['radius'] = np.asarray([1]*coords.shape[0])
-
-#     # geom1 = pv.Cube()
-#     # # geom = pv.Sphere(theta_resolution=8, phi_resolution=8)
-#     # glyphed = pcloud.glyph(scale="radius", geom=geom1) # progress_bar=True)
-#     # pcloud.point_data['scalars'] = scalar
-#     # pcloud.set_active_scalars('scalars')
-#     # # print(glyphed.n_points())
-    
-
-#     # p = pv.Plotter(notebook=False)
-#     # p.add_mesh(glyphed, show_edges=True, edge_color='black', scalars='scalars')
-#     # print(pcloud)
-#     # # print(p.n_points())
-#     # p.show()
-#     #https://github.com/pyvista/pyvista-support/issues/346
-#     # pyvista.rcParams['use_ipyvtk'] = True
-#     global coords_df_2
-#     coords_df_2 = main_df[['x', 'y', 'z']].copy()
-#     # print(data_df)
-    
-#     for i in ['t'+str(i) for i in list(range(len(time_array)))]:
-#         coords_df_2 = coords_df.join(data_df[i])
-#     # coords_df = coords_df.join(data_df)
-#     # print(coords_df)
-#     vtkpoints = pvgeo.points_to_poly_data(coords_df_2)
-#     # vtkpoints = pvgeo.points_to_poly_data(model)
-#     # print(vtkpoints)
-#     bounds = vtkpoints.bounds
-#     # print(bounds)
-#     margin = 100
-#     n = 300 #600
-#     ldim = bounds[-1] + margin*2
-#     grid = pyvista.UniformGrid((n,n,n))
-#     grid.origin = [bounds[0] - margin]*3
-#     spacing = ldim/(n-1)
-#     grid.spacing = [spacing]*3
-
-#     vox = grid.interpolate(vtkpoints,radius=spacing*2,progress_bar=True)
-#     mask = vox['t0']>0
-#     vox_valid = vox.extract_points(mask, adjacent_cells=False)
-#     # vox_valid.plot()
-#     plotter = pyvista.Plotter(notebook=False)
-#     plotter.add_mesh(vox_valid)
-#     plotter.add_slider_widget(change_t, [0,len(time_array)-1], title='Time')
-#     plotter.show()
-
-# def Visualise_2(main_df, data_df, time_array):
-#     global coords_df_2, plotter, grid, vtkpoints, spacing
-#     coords_df_2 = main_df[['x', 'y', 'z']].copy()
-#     for i in ['t'+str(i) for i in list(range(len(time_array)))]:
-#         coords_df_2 = coords_df_2.join(data_df[i])
-
-#     vtkpoints = pvgeo.points_to_poly_data(coords_df_2)
-#     bounds = vtkpoints.bounds
-#     margin = 100
-#     n = 500 #600
-#     ldim = bounds[-1] + margin*2
-#     grid = pyvista.UniformGrid((n,n,n))
-#     grid.origin = [bounds[0] - margin]*3
-#     spacing = ldim/(n-1)
-#     grid.spacing = [spacing]*3
-
-#     plotter = pyvista.Plotter(notebook=False)
-#     plotter.add_slider_widget(change_t, [0,len(time_array)-1], value = 0, title='Time')
-#     plotter.show()
-
-# def change_t(value):
-#     global vox_valid
-#     time = 't'+str(int(value))
-    
-#     vox = grid.interpolate(vtkpoints,radius=spacing*2,progress_bar=False)
-#     mask = vox[time]>0
-#     vox_valid = vox.extract_points(mask, adjacent_cells=False)
-#     plotter.add_mesh(vox_valid)
-
-# def Visualise_3(main_df, data_df, time_array):
-#     global coords_df_2, points, plotter, data_array
-#     coords_df_2 = main_df[['x', 'y', 'z']].copy()
-#     for i in ['t'+str(i) for i in list(range(len(time_array)))]:
-#         coords_df_2 = coords_df_2.join(data_df[i])
-#     print(coords_df_2)
-#     points = pyvista.PolyData(np.asarray(coords_df_2[['x', 'y', 'z']]), force_float=False)
-#     # print(points)
-#     data_array = np.asarray(coords_df_2['t0'])
-#     print(data_array)
-#     points.cell_data['t0'] = data_array.flatten()
-#     print(points.cell_data)
-#     plotter = pyvista.Plotter()
-#     plotter.add_mesh(points)
-#     plotter.add_slider_widget(change_t2, [0, len(time_array)-1], value = 0, title='Time')
-#     plotter.show(interactive_update=True)
-
-# def change_t2(value):
-#     time = 't'+str(int(value))
-#     data_array = np.asarray(coords_df_2[time])
-#     points.cell_data[time] = data_array.flatten()
-#     print(data_array)
-#     points.set_active_scalars(time)
-#     print(points.cell_data)
-#     # plotter.update_scalars(data_array.flatten(), mesh = points)
-#     plotter.update()
-
-def Visualise_4(main_df, data_df, time_array):
+def Visualise(main_df, data_df, time_array):
     global coords_df_2, plotter, grid, spacing, e
     coords_df_2 = main_df[['x', 'y', 'z']].copy()
     for i in ['t'+str(i) for i in list(range(len(time_array)))]:
         coords_df_2 = coords_df_2.join(data_df[i])
-
-    # points = pyvista.PolyData(np.asarray(coords_df_2[['x','y','z']]), force_float=False)
-    # grid = points.cast_to_unstructured_grid()
-    # print(points)
-    # print(grid)
-    # grid.glyph(geom=pyvista.Cube()).plot()
-
-    # # points.glyph(geom=pyvista.Cube(), factor=1).plot()
-    # plotter = pyvista.Plotter()
-    # plotter.add_mesh(grid)
-    # plotter.show()
-
-    #https://github.com/pyvista/pyvista-support/issues/291
-    
+    # https://github.com/pyvista/pyvista-support/issues/291
+    # https://github.com/pyvista/pyvista-support/issues/282
+    # https://github.com/pyvista/pyvista/pull/983
+    # https://github.com/pyvista/pyvista-support/issues/295
+    # https://github.com/pyvista/pyvista-support/issues/154
     points = pvgeo.points_to_poly_data(coords_df_2[['x','y','z']])
     voxelizer = pvgeo.filters.VoxelizePoints()
     voxelizer.set_deltas(1,1,1)
     grid = voxelizer.apply(points)
     print(grid)
-    grid.cell_data['Time'] = coords_df_2['t0']
-    
+    grid.cell_data['Mw'] = coords_df_2['t0'] 
     e = SceneEngine(grid, time_array)
-    minval = np.nanmin(np.asarray(coords_df_2['t'+str(time_array[-1])]))
-    maxval = np.nanmax(np.asarray(coords_df_2['t'+str(time_array[0])]))
-    # print(grid)
-
-    
-    #move add widget commands to scene engine class
-    # add_slider(time_array)
-
-
-    # plotter.add_slider_widget(e.threshold_min, rng=[minval, maxval], value = np.nanmin(grid.active_scalars), title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9))
-    # plotter.add_slider_widget(e.threshold_max, rng=[minval, maxval], value = np.nanmax(grid.active_scalars), title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9))
-
-
-    # plotter.add_slider_widget(e.threshold_min, rng=[np.nanmin(grid.active_scalars), np.nanmax(grid.active_scalars)], value = np.nanmin(grid.active_scalars), title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9))
-    # plotter.add_slider_widget(e.threshold_max, rng=[np.nanmin(grid.active_scalars), np.nanmax(grid.active_scalars)], value = np.nanmax(grid.active_scalars), title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9))
-    # plotter.clear_slider_widgets()
-    # plotter.add_slider_widget(e.threshold_min, rng=[0, 500000], value=0, title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9))
-    # plotter.add_slider_widget(e.threshold_max, rng=[0, 500000], value = 500000, title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9))
-
-def createGrid(tstep):
-    points = pvgeo.points_to_poly_data(coords_df_2[['x','y','z']])
-    voxelizer = pvgeo.filters.VoxelizePoints()
-    voxelizer.set_deltas(1,1,1)
-    grid2 = voxelizer.apply(points)
-    outline = grid2.outline()
-    grid2.cell_data['Time'] = coords_df_2['t'+str(int(tstep))]
-    print(grid2)
-    print(grid2.active_scalars)
-    return grid2
+    # view.update_canvas()
 
 class SceneEngine:
     def __init__(self, grid, time_array):
+        global view
         self.not_init_state = False
         self.grid = grid
         self.output = self.grid.threshold(all_scalars=False)
@@ -640,68 +466,51 @@ class SceneEngine:
         self.plotter.set_scale()
         self.outline = self.grid.outline()
         self.plotter.add_mesh(self.outline)
-        self.plotter.add_mesh(self.output, scalars='Time')
+        self.plotter.add_mesh(self.output, scalars='Mw')
         self.minM = np.nanmin(self.grid.active_scalars)
         self.maxM = np.nanmax(self.grid.active_scalars)
         self.clim = [self.minM, self.maxM]
-
-        self.tw = self.plotter.add_slider_widget(self.update_timestep, rng=[0,len(time_array)-1], value=0, title="Time", pointa=(.67, .9), pointb=(.98, .9), event_type='always', pass_widget=False)
         self.tmin = self.plotter.add_slider_widget(self.threshold_min, rng=[self.minM, self.maxM], value = self.clim[0], title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9), event_type='always', pass_widget=False)
         self.tmax = self.plotter.add_slider_widget(self.threshold_max, rng=[self.minM, self.maxM], value = self.clim[1], title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9), event_type='always', pass_widget=False)
+        self.tw = self.plotter.add_slider_widget(self.update_timestep, rng=[0,len(time_array)-1], value=0, title="Time", pointa=(.67, .9), pointb=(.98, .9), event_type='always', pass_widget=False)
         self.not_init_state = True
-        self.plotter.show(return_viewer=True)
+        self.view = self.plotter.show(return_viewer=True)
 
+        # self.update()
 
     def _threshold(self):
         self.output.overwrite(self.grid.threshold([self._mi, self._ma], all_scalars=False))
-    
+        # if self.not_init_state:
+
     def threshold_min(self, mi):
         self._mi = mi
         self._threshold()
-    
+        # self.view.update_canvas()
+
     def threshold_max(self, ma):
         self._ma = ma
         self._threshold()
 
     def update_timestep(self, tstep):
         self._tstep = tstep
-        grid.cell_data['Time'] = coords_df_2['t'+str(int(tstep))]
+        grid.cell_data['Mw'] = coords_df_2['t'+str(int(tstep))]
         self.clim=[np.nanmin(self.grid.active_scalars), np.nanmax(self.grid.active_scalars)]
         self.plotter.update_scalar_bar_range(self.clim)
-        # plotter.clear_slider_widgets()
-        
-        # plotter.add_slider_widget(e.update_timestep, rng=[0,len(self.time_array)-1], value=0, title="Time", pointa=(.67, .9), pointb=(.98, .9))
-        # tmin = plotter.add_slider_widget(e.threshold_min, rng=[np.nanmin(grid.active_scalars), np.nanmax(grid.active_scalars)], value = np.nanmin(grid.active_scalars), title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9))
-        # tmax = plotter.add_slider_widget(e.threshold_max, rng=[np.nanmin(grid.active_scalars), np.nanmax(grid.active_scalars)], value = np.nanmax(grid.active_scalars), title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9))
-        # plotter.clear_slider_widgets()
-        if self.not_init_state:
-            self.tmin.GetRepresentation().SetMinimumValue(self.clim[0])
-            self.tmin.GetRepresentation().SetMaximumValue(self.clim[1])
-            
-            self.tmax.GetRepresentation().SetMinimumValue(self.clim[0])
-            self.tmax.GetRepresentation().SetMaximumValue(self.clim[1])
+        smin = self.tmin.GetRepresentation()
+        smax = self.tmax.GetRepresentation()
+        # if self.not_init_state:
+        smin.SetMinimumValue(self.clim[0])
+        smin.SetMaximumValue(self.clim[1])
+        smax.SetMinimumValue(self.clim[0])
+        smax.SetMaximumValue(self.clim[1])
+        smin.SetValue(self.clim[0])
+        smax.SetValue(self.clim[1])
 
-        # self.tmin.SetValue(self.clim[0])
-        # self.tmax.SetValue(self.clim[1])
-        # add_slider()
-        # self.grid.overwrite(createGrid(tstep))
         self._threshold()
     
-def add_slider(time_array):
-    plotter.clear_slider_widgets()
-
-    # minval = np.nanmin(np.asarray(coords_df_2['t'+str(time_array[-1])]))
-    # maxval = np.nanmax(np.asarray(coords_df_2['t'+str(time_array[0])]))
-
-    # plotter.add_slider_widget(E.update_timestep, rng=[0,len(self.time_array)-1], value=0, title="Time", pointa=(.67, .9), pointb=(.98, .9))
-    
-    # plotter.add_slider_widget(e.threshold_min, rng=[minval, maxval], value = np.nanmin(grid.active_scalars), title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9))
-    # plotter.add_slider_widget(e.threshold_max, rng=[minval, maxval], value = np.nanmax(grid.active_scalars), title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9))
-
-    plotter.add_slider_widget(e.update_timestep, rng=[0,len(time_array)-1], value=0, title="Time", pointa=(.67, .9), pointb=(.98, .9))
-    # plotter.add_slider_widget(e.threshold_min, rng=[np.nanmin(grid.active_scalars), np.nanmax(grid.active_scalars)], value = np.nanmin(grid.active_scalars), title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9))
-    # plotter.add_slider_widget(e.threshold_max, rng=[np.nanmin(grid.active_scalars), np.nanmax(grid.active_scalars)], value = np.nanmax(grid.active_scalars), title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9))
-
+    def update(self):
+        self.view.update_canvas()
+        
 
 if __name__ == "__main__":
     in_dir = "/data/sample1/25/uct/tiff/"  # '/data/sample1/25/model/25.stl' #"/data/sample1/25/uct/tiff/"
@@ -762,5 +571,5 @@ if __name__ == "__main__":
         avg_mw.append(data_df[i].mean())
 
     # print(avg_mw)
-    Visualise_4(main_df, data_df, time_array)
+    Visualise(main_df, data_df, time_array)
     # avg_mw = [i for i in mw_data[2][i].mean()]
