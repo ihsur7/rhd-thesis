@@ -12,7 +12,7 @@ import PVGeo as pvgeo
 from tqdm import tqdm
 import gmpy2
 from ipywidgets import widgets
-
+import pyvistaqt
 pyvista.set_plot_theme('paraview')
 
 class Presets:
@@ -460,8 +460,8 @@ class SceneEngine:
         self.output = self.grid.threshold(all_scalars=False)
         self.time_array = time_array
 
-        self._tstep = 0
-        self.plotter = pyvista.Plotter()
+        self._tstep = 0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+        self.plotter = pyvistaqt.BackgroundPlotter(show=False)
         self.plotter.set_scale()
         self.outline = self.grid.outline()
         self.plotter.add_mesh(self.outline)
@@ -475,7 +475,7 @@ class SceneEngine:
         self.tmax = self.plotter.add_slider_widget(self.threshold_max, rng=[self.minM, self.maxM], value = self.clim[1], title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9), event_type='always', pass_widget=False)
         self.tw = self.plotter.add_slider_widget(self.update_timestep, rng=[0,len(time_array)-1], value=0, title="Time", pointa=(.67, .9), pointb=(.98, .9), event_type='always', pass_widget=False)
         self.not_init_state = True
-        self.view = self.plotter.show(return_viewer=True)
+        self.view = self.plotter.show()
         # self.update()
 
     def _threshold(self):
@@ -494,21 +494,22 @@ class SceneEngine:
     def update_timestep(self, tstep):
         self._tstep = tstep
         grid.cell_data['Mw'] = coords_df_2['t'+str(int(tstep))]
+
         self.clim=[np.nanmin(self.grid.active_scalars), np.nanmax(self.grid.active_scalars)]
         self.plotter.update_scalar_bar_range(self.clim)
-        # self.output.overwrite(self.grid.threshold([self._mi, self._ma], all_scalars=False))
+        self.output.overwrite(self.grid.threshold([self._mi, self._ma], all_scalars=False))
 
         smin = self.tmin.GetRepresentation()
         smax = self.tmax.GetRepresentation()
-        # if self.not_init_state:
-        smin.SetMinimumValue(self.clim[0])
-        smin.SetMaximumValue(self.clim[1])
-        smax.SetMinimumValue(self.clim[0])
-        smax.SetMaximumValue(self.clim[1])
+        if self.not_init_state:
+            smin.SetMinimumValue(self.clim[0])
+            smin.SetMaximumValue(self.clim[1])
+            smax.SetMinimumValue(self.clim[0])
+            smax.SetMaximumValue(self.clim[1])
         smin.SetValue(self.clim[0])
         smax.SetValue(self.clim[1])
-
         self._threshold()
+
     
     def update(self):
         self.view.update_canvas()
