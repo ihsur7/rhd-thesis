@@ -13,7 +13,7 @@ from tqdm import tqdm
 import gmpy2
 from ipywidgets import widgets
 import pyvistaqt
-
+# pyvista.set_plot_theme('paraview')
 
 class Presets:
     def __init__(self, led):
@@ -434,7 +434,7 @@ def MwLossData(temp, main_df, path_df, time_array, gradtype='lin', time_array_un
 
 
 def Visualise(main_df, data_df, time_array):
-    global coords_df_2, plotter, spacing, e
+    global coords_df_2, grid1
     coords_df_2 = main_df[['x', 'y', 'z']].copy()
     for i in ['t'+str(i) for i in list(range(len(time_array)))]:
         coords_df_2 = coords_df_2.join(data_df[i])
@@ -446,66 +446,64 @@ def Visualise(main_df, data_df, time_array):
     points = pvgeo.points_to_poly_data(coords_df_2[['x','y','z']])
     voxelizer = pvgeo.filters.VoxelizePoints()
     voxelizer.set_deltas(1,1,1)
-    grid = voxelizer.apply(points)
+    grid1 = voxelizer.apply(points)
     # print(grid)
-    # grid.cell_data['Mw'] = coords_df_2['t0'] 
     for i in ['t'+str(i) for i in list(range(len(time_array)))]:
-        grid.cell_data[i] = coords_df_2[i]
-    e = SceneEngine(grid, time_array)
-
-# def helperfunc(grid, tstep):
-#     grid.set_active_scalars('t'+str(int(tstep)))
-#     # print('scalars = ', grid.active_scalars)
-#     # print('scalars name = ', grid.active_scalars_name)
-#     return grid.threshold()
+        grid1.cell_data[i] = coords_df_2[i]
+    # grid.cell_data['Mw'] = coords_df_2['t0'] 
+    e = SceneEngine(grid1, time_array)
+    # view.update_canvas()
 
 class SceneEngine:
     def __init__(self, grid, time_array):
         global view
-        pyvista.set_plot_theme('document')
         self.not_init_state = False
-        self.grid = grid.copy(deep=True)
+        self.grid = grid #.copy(deep=True)
         self.output = self.grid.threshold(all_scalars=False)
         self.time_array = time_array
+
         self._tstep = 0
         self.grid.set_active_scalars('t0')
         self.plotter = pyvista.Plotter()
+        # self.plotter.show(interactive_update=True)
         self.plotter.set_scale()
         self.plotter.add_axes()
         self.outline = self.grid.outline()
         self.plotter.add_mesh(self.outline)
-        self.plotter.add_mesh(self.output, scalars='t0')
+        self.plotter.add_mesh(self.output, name = 'actor', scalars='t0')
+        # self.plotter.add_scalar_bar(title='Mw')
         self.minM = np.nanmin(self.grid.active_scalars)
         self.maxM = np.nanmax(self.grid.active_scalars)
         self.clim = [self.minM, self.maxM]
+        self._mi = self.minM
+        self._ma = self.maxM
         self.tmin = self.plotter.add_slider_widget(self.threshold_min, rng=[self.minM, self.maxM], value = self.clim[0], title="Threshold Min", pointa=(.025, .9), pointb=(.31, .9), event_type='always', pass_widget=False)
         self.tmax = self.plotter.add_slider_widget(self.threshold_max, rng=[self.minM, self.maxM], value = self.clim[1], title="Threshold Max", pointa=(.35, .9), pointb=(.64, .9), event_type='always', pass_widget=False)
         self.tw = self.plotter.add_slider_widget(self.update_timestep, rng=[0,len(time_array)-1], value=0, title="Time", pointa=(.67, .9), pointb=(.98, .9), event_type='always', pass_widget=False)
         self.not_init_state = True
+        # self.plotter.update()
         self.view = self.plotter.show()
+        # self.update()
 
     def _threshold(self):
         self.output.overwrite(self.grid.threshold([self.minM, self.maxM], all_scalars=False))
-        # if self.not_init_state:
 
     def threshold_min(self, mi):
         self.minM = mi
         self._threshold()
-        # self.view.update_canvas()
 
     def threshold_max(self, ma):
         self.maxM = ma
         self._threshold()
 
     def update_timestep(self, tstep):
+        self.output = self.grid.threshold(all_scalars=False)
         self._tstep = tstep
         self.grid.set_active_scalars('t'+str(int(tstep)))
+        self.plotter.update_scalars(self.grid.active_scalars)
         self.clim=[np.nanmin(self.grid.active_scalars), np.nanmax(self.grid.active_scalars)]
-        self.minM = self.clim[0]
-        self.maxM = self.clim[1]
         self.plotter.update_scalar_bar_range(self.clim)
-        self.output.overwrite(self.grid.threshold([self.minM, self.maxM]))
-        # self.grid.overwrite(helperfunc(self.grid,tstep))
+        self.output.overwrite(self.grid.threshold([self.minM, self.maxM], all_scalars=False))
         smin = self.tmin.GetRepresentation()
         smax = self.tmax.GetRepresentation()
         if self.not_init_state:
@@ -515,7 +513,7 @@ class SceneEngine:
             smax.SetMaximumValue(self.clim[1])
         smin.SetValue(self.clim[0])
         smax.SetValue(self.clim[1])
-        self._threshold()
+        # self._threshold()
 
 if __name__ == "__main__":
     in_dir = "/data/sample1/25/uct/tiff/"  # '/data/sample1/25/model/25.stl' #"/data/sample1/25/uct/tiff/"
