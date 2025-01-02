@@ -12,8 +12,10 @@ import PVGeo as pvgeo
 from tqdm import tqdm
 import gmpy2
 from ipywidgets import widgets
-import pyvistaqt
-
+# import pyvistaqt
+import itertools
+# import multiprocessing as mp
+# from multiprocessing import shared_memory
 
 class Presets:
     def __init__(self, led):
@@ -362,7 +364,7 @@ def MwLossData(temp, main_df, path_df, time_array, gradtype='lin', time_array_un
     conc_df_1 = conc_df
     for i in data_df.index:
         data_df['t0'][i] = main_df['mw'][i]
-        conc_df['t0'][i] = main_df['water_conc'][i]
+        # conc_df['t0'][i] = main_df['water_conc'][i] # removed as initial concentration needs to be kept 0
         # data_df.loc[[i, 't0']]= main_df.loc[[i, 'mw']]
         # conc_df.loc[[i, 't0']] = main_df.loc[[i, 'water_conc']]
     for tindex, t in enumerate(tqdm(time_array)):
@@ -385,7 +387,12 @@ def MwLossData(temp, main_df, path_df, time_array, gradtype='lin', time_array_un
                     avg_conc = 0
                 else:
                     avg_conc = (Fick(diff_coeff_mm["37"], tt, c0=water_conc, x=index*pixel_scale) + Fick(diff_coeff_mm["37"], tt, c0=water_conc, x=(index+1)*pixel_scale))/2
-                total_conc = gmpy2.sqrt((avg_conc**2)+(main_df.loc[q, 'water_conc']**2))
+
+                total_conc = math.sqrt((avg_conc**2)+(conc_df.loc[q, 't'+str(tindex)]**2))
+                if tt > 0 and q == 0:
+                    print('t = ', tt)
+                    print('avg_conc = ', avg_conc)
+                    print('total_conc = ', total_conc)
                 # print(total_conc)
                 # total_conc = math.sqrt((avg_conc**2)+(path[2][q][3]**2))
                 total_conc_ratio = total_conc/water_conc
@@ -431,7 +438,56 @@ def MwLossData(temp, main_df, path_df, time_array, gradtype='lin', time_array_un
     # np.save(output_dir+'conc_ratio'+'_'+gradtype, conc_data_array, allow_pickle=True)
     return main_df, path_df, data_df
 
+class SharedNumpy:
 
+    __slots__ = ('arr', 'shm', 'name', 'shared',)
+    def __init__(self, arr:np.ndarray=None):
+        if arr is not None:
+            self.shm = shared_memory.SharedMemory(create=True, size=arr.nbytes)
+            self.arr = np.ndarray(arr.shape, dtype=arr.dtype, buffer=self.shm.buf)
+            self.name = self.shm.name
+            np.copyto(self.arr,arr)
+
+        def __getattr__(self, item):
+            if hasattr(self.arr, item):
+                return getattr(self.arr, item)
+            raise AttributeError(f"{self.__class__.__name__}, doesn't have attribute {item!r}")
+
+        def __str__(self):
+            return str(self.arr)
+
+        @classmethod
+        def from_name(cls, name, shape, dtype):
+            memory = cls(arr=None)
+            memory.shm = shared_memory.SharedMemory(name)
+            memory.arr = np.ndarray(shape, dtype=dtype, buffer=memory.shm.buf)
+            memory.name = name
+            return memory
+
+        @property
+        def dtype(self):
+            return self.arr.dtype
+
+        @property
+        def shape(self):
+            return self.arr.shape
+
+def distributed(size, dim):
+    memory = SharedNumpy(arr = np.zeros((size,) * dim))
+    split_size = np.int64(np.ceil(memory.arr.size / mp.cpu_count()))
+
+    settings = dict(
+        memory=itertools.repeat(memory.name),
+        shape=itertools.repeat(memory.arr.shape),
+        dtype=itertools.repeat(memory.arr.dtype),
+        start=np.arange(mp.cpu_count()),
+        num=itertools.repeat(split_size)
+    )
+    with mp.Pool(mp.cpu_count()) as pool:
+        pool.starmap(fun, zip(*settings.values()))
+
+    print(f"\n\nDone {dim}D, size: {size}, elements: {size ** dim}")
+    return memory
 
 def Visualise(main_df, data_df, time_array):
     global coords_df_2, plotter, spacing, e
